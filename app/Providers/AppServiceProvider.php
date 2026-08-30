@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -34,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // Turn silent N+1 queries, missing attributes and mass-assignment
+        // mistakes into immediate exceptions. Off in production, where an
+        // exception is worse than a slow page.
+        Model::shouldBeStrict(! app()->isProduction());
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

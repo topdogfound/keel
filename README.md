@@ -89,5 +89,12 @@ load error) — npm was run on the host. Fix with `./keel node-reset`.
 **Files created by artisan are owned by root** — `WWWUSER`/`WWWGROUP` in `.env`
 don't match your host user. Re-run `./keel setup`.
 
+**PHPStan fails with `Undefined constant "Larastan\Larastan\LARAVEL_VERSION"`**
+— this almost always means **the application cannot boot**, not that anything is
+wrong with PHPStan. Larastan boots Laravel inside PHPStan's bootstrap and
+swallows any exception, so a fatal in a service provider or model surfaces later
+as this unrelated-looking message. Run `./keel artisan about` to see the real
+error, fix that, and PHPStan goes green again.
+
 **HMR doesn't reload** — on some Docker Desktop setups bind-mount file events
 don't propagate. Set `VITE_USE_POLLING=1` in `.env` and restart `./keel dev`.

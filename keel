@@ -120,10 +120,17 @@ cmd_doctor() {
     if docker info >/dev/null 2>&1; then ok "Docker is running"
     else warn "Docker is not running — nothing else will work"; problems=$((problems+1)); fi
 
+    # Ports this project already publishes. Publishers renders as
+    # "[{0.0.0.0 80 80 tcp} ...]", so pull the published port from each tuple.
+    local ours
+    ours="$(docker compose ps --format '{{.Publishers}}' 2>/dev/null \
+        | grep -oE '\{[^}]+\}' \
+        | awk '{print $2}' | sort -u)"
+
     for p in "${APP_PORT:-80}" "${VITE_PORT:-5173}" "${FORWARD_DB_PORT:-5432}" 8025; do
-        if (command -v ss >/dev/null && ss -ltn 2>/dev/null | grep -q ":$p ") ; then
-            if ! docker compose ps --format '{{.Publishers}}' 2>/dev/null | grep -q ":$p"; then
-                warn "Port $p is bound by something outside this project (override it in .env)"
+        if command -v ss >/dev/null && ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$p$"; then
+            if ! printf '%s\n' "$ours" | grep -qx "$p"; then
+                warn "Port $p is in use by something outside this project (override it in .env)"
                 problems=$((problems+1))
             fi
         fi
@@ -131,14 +138,17 @@ cmd_doctor() {
 
     [ -d vendor ] || { warn "vendor/ missing — run ./keel setup"; problems=$((problems+1)); }
 
-    # The most common failure: npm run on the host, so native binaries target the
-    # wrong platform and Vite dies on a module it can't load.
-    if [ -d node_modules ] && [ ! -d node_modules/@rollup ] && [ -f package.json ]; then
-        warn "node_modules looks incomplete — try ./keel node-reset"; problems=$((problems+1))
-    fi
-    if [ -d node_modules ] && ! ls node_modules/@rollup 2>/dev/null | grep -q linux; then
-        warn "node_modules has no linux rollup binary: npm was probably run on the host. Fix: ./keel node-reset"
-        problems=$((problems+1))
+    # The most common failure: npm run on the host, so the native binaries are
+    # built for the wrong platform and Vite dies on a module it cannot load.
+    if [ -f package.json ]; then
+        if [ ! -d node_modules ]; then
+            warn "node_modules is missing — run ./keel npm install"; problems=$((problems+1))
+        elif [ ! -d node_modules/@rollup ]; then
+            warn "node_modules looks incomplete — run ./keel node-reset"; problems=$((problems+1))
+        elif ! ls node_modules/@rollup 2>/dev/null | grep -q linux; then
+            warn "node_modules has no linux rollup binary: npm was run on the host, not in the container. Fix: ./keel node-reset"
+            problems=$((problems+1))
+        fi
     fi
 
     if [ -f package.json ] && grep -q '"@playwright/test"' package.json; then

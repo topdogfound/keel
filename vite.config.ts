@@ -29,7 +29,18 @@ export default defineConfig({
         }),
     ]),
     server: {
+        // Vite runs inside the container; the browser is on the host.
+        host: '0.0.0.0', // bind all interfaces, not just container loopback
+        port: 5173,
+        strictPort: true,
+        origin: 'http://localhost:5173', // keeps 0.0.0.0 out of public/hot
+        hmr: {
+            host: 'localhost', // where the browser should connect back to
+        },
         watch: {
+            // Some Docker Desktop bind mounts don't propagate inotify events.
+            // Opt in with VITE_USE_POLLING=1 rather than paying for it always.
+            usePolling: !!process.env.VITE_USE_POLLING,
             ignored: [
                 '**/.agents/**',
                 '**/.claude/**',

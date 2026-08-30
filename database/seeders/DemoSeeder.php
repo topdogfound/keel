@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Actions\Teams\CreateTeam;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 /**
@@ -17,8 +18,6 @@ use Illuminate\Database\Seeder;
  */
 class DemoSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     public const PASSWORD = 'password';
 
     public function run(): void

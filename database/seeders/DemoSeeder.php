@@ -24,8 +24,6 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
-        $this->call(RolesAndPermissionsSeeder::class);
-
         $owner = $this->user('Ada Lovelace', 'owner@keel.test');
         $admin = $this->user('Grace Hopper', 'admin@keel.test');
         $member = $this->user('Alan Turing', 'member@keel.test');

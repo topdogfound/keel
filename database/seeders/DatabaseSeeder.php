@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Roles and permissions are application infrastructure, not demo data,
+        // so this call must survive `./keel new`.
+        $this->call(RolesAndPermissionsSeeder::class);
+
         $this->call(DemoSeeder::class);
     }
 }

@@ -42,7 +42,9 @@ sed -i "s/^APP_NAME=.*/APP_NAME=\"$TITLE\"/" .env.example
 rm -rf docs/adr CHANGELOG.md
 rm -f database/seeders/DemoSeeder.php
 if [ -f database/seeders/DatabaseSeeder.php ]; then
-    sed -i '/DemoSeeder::class,\?/d' database/seeders/DatabaseSeeder.php
+    # Only the demo call goes. RolesAndPermissionsSeeder is infrastructure:
+    # without it a new project starts with no roles and no way into /admin.
+    sed -i '/DemoSeeder::class/d' database/seeders/DatabaseSeeder.php
 fi
 
 # README becomes the project's, not the template's

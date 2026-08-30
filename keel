@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# Keel — the single entrypoint. Requires Docker; nothing else.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+BOOTSTRAP_IMAGE="laravelsail/php84-composer:latest"
+SAIL="vendor/bin/sail"
+
+c_red=$'\033[0;31m'; c_grn=$'\033[0;32m'; c_ylw=$'\033[0;33m'
+c_cyn=$'\033[0;36m'; c_bld=$'\033[1m';   c_off=$'\033[0m'
+
+info() { printf '%s➜%s %s\n' "$c_cyn" "$c_off" "$*"; }
+ok()   { printf '%s✔%s %s\n' "$c_grn" "$c_off" "$*"; }
+warn() { printf '%s!%s %s\n' "$c_ylw" "$c_off" "$*"; }
+die()  { printf '%s✖%s %s\n' "$c_red" "$c_off" "$*" >&2; exit 1; }
+
+require_docker() {
+    docker info >/dev/null 2>&1 || die "Docker isn't running. Start Docker and try again — it's the only thing Keel needs on the host."
+}
+
+# Run composer in a throwaway container. This is what breaks the bootstrap cycle:
+# compose.yaml builds the app image from ./vendor/laravel/sail/runtimes/8.4, which
+# doesn't exist until composer install has run at least once.
+bootstrap_composer() {
+    docker run --rm \
+        -u "$(id -u):$(id -g)" \
+        -e HOME=/tmp -e COMPOSER_HOME=/tmp/composer \
+        -v "$PWD":/var/www/html -w /var/www/html \
+        "$BOOTSTRAP_IMAGE" composer "$@"
+}
+
+require_vendor() {
+    [ -f "$SAIL" ] || die "vendor/ is missing. Run ${c_bld}./keel setup${c_off} first."
+}
+
+sail() { require_vendor; "$SAIL" "$@"; }
+
+wait_for_pgsql() {
+    info "Waiting for PostgreSQL to accept connections..."
+    for _ in $(seq 1 60); do
+        if docker compose exec -T pgsql pg_isready -q 2>/dev/null; then
+            ok "PostgreSQL ready"; return 0
+        fi
+        sleep 2
+    done
+    die "PostgreSQL didn't become ready in 120s. Check ./keel logs pgsql"
+}
+
+cmd_setup() {
+    local fresh=0 ci=0
+    for a in "$@"; do
+        case "$a" in
+            --fresh) fresh=1 ;;
+            --ci)    ci=1 ;;
+            *) die "Unknown flag for setup: $a" ;;
+        esac
+    done
+
+    require_docker
+
+    if [ "$fresh" = 1 ]; then
+        warn "--fresh: destroying containers and volumes (this drops the database)"
+        docker compose down -v --remove-orphans || true
+    fi
+
+    [ -f .env ] || { cp .env.example .env; ok "Created .env from .env.example"; }
+
+    # Container-created files must belong to the host user, or artisan make:*
+    # output ends up root-owned on Linux.
+    local uid gid
+    uid="$(id -u)"; gid="$(id -g)"
+    grep -q '^WWWUSER='  .env && sed -i "s/^WWWUSER=.*/WWWUSER=$uid/"  .env || printf 'WWWUSER=%s\n'  "$uid" >> .env
+    grep -q '^WWWGROUP=' .env && sed -i "s/^WWWGROUP=.*/WWWGROUP=$gid/" .env || printf 'WWWGROUP=%s\n' "$gid" >> .env
+
+    if [ ! -d vendor ]; then
+        info "Installing PHP dependencies (throwaway container, no host PHP needed)..."
+        bootstrap_composer install --no-interaction
+        ok "vendor/ ready"
+    fi
+
+    info "Building the application image..."
+    "$SAIL" build
+    info "Starting the stack..."
+    "$SAIL" up -d
+    wait_for_pgsql
+
+    grep -q '^APP_KEY=base64:' .env || { "$SAIL" artisan key:generate; }
+    "$SAIL" artisan storage:link --quiet || true
+    "$SAIL" artisan migrate --seed --force
+
+    info "Installing frontend dependencies (inside the container — never run npm on the host)..."
+    "$SAIL" npm install
+    # Playwright's OS libraries ship in the Sail image, but the browser binaries do not.
+    # PLAYWRIGHT_BROWSERS_PATH=0 puts them in node_modules, so they survive restarts.
+    if grep -q '"@playwright/test"' package.json 2>/dev/null; then
+        info "Installing Playwright browsers..."
+        "$SAIL" npx playwright install chromium
+    fi
+    # Wayfinder, Inertia and the TypeScript transformer all generate sources at build
+    # time. They're gitignored, so a typecheck before the first build always fails.
+    info "Building frontend assets..."
+    "$SAIL" npm run build
+
+    [ "$ci" = 1 ] || git config core.hooksPath .githooks 2>/dev/null || true
+
+    echo
+    ok "${c_bld}Keel is up.${c_off}"
+    printf '  %-14s http://localhost:%s\n' "App"     "${APP_PORT:-80}"
+    printf '  %-14s http://localhost:%s/admin\n'     "Admin"   "${APP_PORT:-80}"
+    printf '  %-14s http://localhost:8025\n'         "Mailpit"
+    printf '  %-14s ./keel db-gui  (http://localhost:8081)\n' "Database"
+    echo
+}
+
+cmd_doctor() {
+    local problems=0
+    echo "${c_bld}Keel doctor${c_off}"
+
+    if docker info >/dev/null 2>&1; then ok "Docker is running"
+    else warn "Docker is not running — nothing else will work"; problems=$((problems+1)); fi
+
+    for p in "${APP_PORT:-80}" "${VITE_PORT:-5173}" "${FORWARD_DB_PORT:-5432}" 8025; do
+        if (command -v ss >/dev/null && ss -ltn 2>/dev/null | grep -q ":$p ") ; then
+            if ! docker compose ps --format '{{.Publishers}}' 2>/dev/null | grep -q ":$p"; then
+                warn "Port $p is bound by something outside this project (override it in .env)"
+                problems=$((problems+1))
+            fi
+        fi
+    done
+
+    [ -d vendor ] || { warn "vendor/ missing — run ./keel setup"; problems=$((problems+1)); }
+
+    # The most common failure: npm run on the host, so native binaries target the
+    # wrong platform and Vite dies on a module it can't load.
+    if [ -d node_modules ] && [ ! -d node_modules/@rollup ] && [ -f package.json ]; then
+        warn "node_modules looks incomplete — try ./keel node-reset"; problems=$((problems+1))
+    fi
+    if [ -d node_modules ] && ! ls node_modules/@rollup 2>/dev/null | grep -q linux; then
+        warn "node_modules has no linux rollup binary: npm was probably run on the host. Fix: ./keel node-reset"
+        problems=$((problems+1))
+    fi
+
+    if [ -f package.json ] && grep -q '"@playwright/test"' package.json; then
+        ls node_modules/.cache/ms-playwright >/dev/null 2>&1 || \
+        ls node_modules/playwright-core/.local-browsers >/dev/null 2>&1 || \
+            warn "Playwright browsers not installed — ./keel npx playwright install chromium"
+    fi
+
+    if [ -f .env ]; then
+        local missing
+        missing="$(comm -23 \
+            <(grep -oE '^[A-Z0-9_]+=' .env.example | sort -u) \
+            <(grep -oE '^[A-Z0-9_]+=' .env | sort -u) || true)"
+        if [ -n "$missing" ]; then
+            warn "Keys in .env.example but missing from .env:"; echo "$missing" | sed 's/=$/  /' | sed 's/^/      /'
+            problems=$((problems+1))
+        fi
+    else
+        warn ".env missing — run ./keel setup"; problems=$((problems+1))
+    fi
+
+    if [ -f composer.lock ] && [ -d vendor ] && [ composer.lock -nt vendor ]; then
+        warn "composer.lock is newer than vendor/ — run ./keel composer install"; problems=$((problems+1))
+    fi
+
+    echo
+    [ "$problems" = 0 ] && ok "No problems found." || warn "$problems problem(s) found."
+}
+
+usage() {
+    cat <<'USAGE'
+Keel — Docker-first Laravel monolith
+
+  Lifecycle    setup [--fresh|--ci] · up · down · restart · fresh · doctor
+  Develop      dev · build · shell · logs [svc] · artisan … · composer … · npm …
+  Quality      test · e2e · lint · types · rector · check
+  Data         migrate · seed · psql · redis · tinker · db-gui
+  Maintenance  node-reset · new <vendor/name>
+
+Everything runs inside Docker. The host needs Docker and git — nothing else.
+USAGE
+}
+
+cmd="${1:-}"; [ $# -gt 0 ] && shift || true
+case "$cmd" in
+    setup)      cmd_setup "$@" ;;
+    doctor)     cmd_doctor "$@" ;;
+    up)         require_docker; sail up -d "$@" ;;
+    down)       docker compose down "$@" ;;
+    restart)    sail restart "$@" ;;
+    fresh)      cmd_setup --fresh ;;
+    shell)      sail shell ;;
+    logs)       sail logs -f "$@" ;;
+    dev)        sail npm run dev ;;
+    build)      sail npm run build ;;
+    test)       sail composer test ;;
+    e2e)        sail npx playwright test "$@" ;;
+    lint)       sail composer lint ;;
+    types)      sail composer types:check ;;
+    rector)     sail php vendor/bin/rector process --dry-run "$@" ;;
+    check)      sail composer ci:check ;;
+    migrate)    sail artisan migrate "$@" ;;
+    seed)       sail artisan db:seed "$@" ;;
+    psql)       sail psql ;;
+    redis)      sail redis ;;
+    tinker)     sail tinker ;;
+    db-gui)     require_docker; docker compose --profile tools up -d pgweb
+                ok "pgweb: http://localhost:${PGWEB_PORT:-8081}" ;;
+    node-reset) info "Removing node_modules (host-side; it's a bind mount)..."
+                rm -rf node_modules package-lock.json
+                sail npm install
+                if grep -q '"@playwright/test"' package.json 2>/dev/null; then
+                    sail npx playwright install chromium
+                fi ;;
+    artisan)    sail artisan "$@" ;;
+    composer)   sail composer "$@" ;;
+    npm)        sail npm "$@" ;;
+    npx)        sail npx "$@" ;;
+    new)        [ $# -eq 1 ] || die "Usage: ./keel new <vendor/name>"
+                bash bin/keel-new.sh "$1" ;;
+    ""|-h|--help|help) usage ;;
+    *)          die "Unknown command: $cmd  (try ./keel help)" ;;
+esac

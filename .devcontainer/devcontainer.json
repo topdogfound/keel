@@ -1,0 +1,54 @@
+// https://aka.ms/devcontainer.json
+//
+// Opens the project *inside* the app container, so PHP intellisense, Pint and
+// Xdebug all work against the container's PHP 8.4 with nothing installed on the
+// host. This is also what GitHub Codespaces uses.
+{
+    "name": "Keel",
+    "dockerComposeFile": ["../compose.yaml"],
+    "service": "laravel.test",
+    "workspaceFolder": "/var/www/html",
+    "remoteUser": "sail",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "laravel.vscode-laravel",
+                "bmewburn.vscode-intellephense-client",
+                "xdebug.php-debug",
+                "onecentlin.laravel-blade",
+                "mikestead.dotenv",
+                "esbenp.prettier-vscode",
+                "dbaeumer.vscode-eslint",
+                "bradlc.vscode-tailwindcss",
+                "editorconfig.editorconfig"
+            ],
+            "settings": {
+                // The whole point: PHP tooling resolves against the container.
+                "php.executablePath": "/usr/bin/php",
+                "intelephense.environment.phpVersion": "8.4",
+                "intelephense.files.exclude": [
+                    "**/node_modules/**",
+                    "**/vendor/**/{Tests,tests}/**"
+                ],
+                "editor.formatOnSave": true,
+                "[php]": { "editor.defaultFormatter": "laravel.vscode-laravel" },
+                "files.eol": "\n"
+            }
+        }
+    },
+
+    "forwardPorts": [80, 5173, 8025, 5432, 8081],
+    "portsAttributes": {
+        "80":   { "label": "App" },
+        "5173": { "label": "Vite" },
+        "8025": { "label": "Mailpit" },
+        "5432": { "label": "PostgreSQL" },
+        "8081": { "label": "pgweb" }
+    },
+
+    // Keep the stack running when the editor window closes.
+    "shutdownAction": "none",
+
+    "postCreateCommand": "./keel setup --ci"
+}

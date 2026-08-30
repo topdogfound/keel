@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Full quality gate before code leaves the machine.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+docker info >/dev/null 2>&1 || { echo "pre-push: Docker not running, skipping checks."; exit 0; }
+docker compose ps --status running --quiet laravel.test 2>/dev/null | grep -q . || {
+    echo "pre-push: stack is down. Start it with ./keel up to run checks before pushing."
+    exit 0
+}
+
+echo "pre-push: running ./keel check ..."
+./vendor/bin/sail composer ci:check

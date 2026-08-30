@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Requires SAIL_XDEBUG_MODE=develop,debug in .env, then ./keel restart.
+            "name": "Listen for Xdebug (Keel)",
+            "type": "php",
+            "request": "launch",
+            "port": 9003,
+            "pathMappings": {
+                "/var/www/html": "${workspaceFolder}"
+            }
+        }
+    ]
+}

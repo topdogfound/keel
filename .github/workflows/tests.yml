@@ -1,0 +1,106 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, so drift in the Sail base image surfaces before someone hits it.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # Mirrors the Sail runtime: same PHP minor, same database and cache engines.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: keel
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U sail -d keel"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      # The app talks to Compose service names; on GitHub the services are on localhost.
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: keel
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      # `composer setup` runs `npm run build` before ci:check runs `types:check`.
+      # That order matters: Wayfinder and the TypeScript transformer generate
+      # sources at build time, and they're gitignored — a typecheck before the
+      # first build fails on unresolved imports. Don't reorder these.
+      - name: Setup application
+        run: composer setup
+
+      - name: Check .env.example is complete
+        run: |
+          missing=$(comm -23 \
+            <(grep -oE '^[A-Z0-9_]+=' .env.example | sort -u) \
+            <(grep -oE '^[A-Z0-9_]+=' .env | sort -u))
+          if [ -n "$missing" ]; then
+            echo "::error::Keys in .env.example missing from .env:"; echo "$missing"; exit 1
+          fi
+
+      - name: Run CI checks
+        run: composer ci:check
+
+  # The job above is fast but doesn't use the Sail image, so it can't catch drift
+  # in the image itself. This one does, at the cost of a full build — so it runs
+  # weekly and on demand rather than on every push.
+  docker-parity:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup and test entirely inside Docker
+        run: |
+          ./keel setup --ci
+          docker compose exec -T laravel.test composer ci:check

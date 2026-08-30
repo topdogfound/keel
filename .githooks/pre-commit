@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Format staged PHP with Pint. Degrades to a notice if the stack is down —
+# a hook that blocks commits because Docker isn't running is a hook people delete.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+docker info >/dev/null 2>&1 || { echo "pre-commit: Docker not running, skipping Pint."; exit 0; }
+[ -f vendor/bin/sail ] || { echo "pre-commit: vendor/ missing, skipping Pint."; exit 0; }
+docker compose ps --status running --quiet laravel.test 2>/dev/null | grep -q . \
+    || { echo "pre-commit: stack is down (./keel up), skipping Pint."; exit 0; }
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR -- '*.php' || true)"
+[ -n "$staged" ] || exit 0
+
+./vendor/bin/sail pint --dirty
+echo "$staged" | xargs -r git add

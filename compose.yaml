@@ -29,6 +29,42 @@ services:
                 condition: service_healthy
             mailpit:
                 condition: service_started
+    horizon:
+        image: 'sail-8.4/app'
+        pull_policy: never
+        command: ['php', 'artisan', 'horizon']
+        restart: unless-stopped
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            laravel.test:
+                condition: service_started
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+    scheduler:
+        image: 'sail-8.4/app'
+        pull_policy: never
+        command: ['php', 'artisan', 'schedule:work']
+        restart: unless-stopped
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            laravel.test:
+                condition: service_started
+            pgsql:
+                condition: service_healthy
     pgsql:
         image: 'postgres:18-alpine'
         ports:

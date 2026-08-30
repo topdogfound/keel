@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,6 +29,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthorizationGates();
+    }
+
+    /**
+     * Dashboards ship with gates that only permit the local environment, so
+     * they 403 everywhere else unless wired explicitly. Staff roles already
+     * describe who runs the product.
+     */
+    protected function configureAuthorizationGates(): void
+    {
+        Gate::define('viewPulse', fn (?User $user = null): bool => $user?->isStaff() ?? false);
     }
 
     /**

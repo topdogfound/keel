@@ -22,12 +22,19 @@ require_docker() {
 # Run composer in a throwaway container. This is what breaks the bootstrap cycle:
 # compose.yaml builds the app image from ./vendor/laravel/sail/runtimes/8.4, which
 # doesn't exist until composer install has run at least once.
+#
+# --ignore-platform-reqs is required, not incidental. This image ships an older
+# PHP (8.4.1) without ext-intl, which filament/support requires, so a fresh
+# clone cannot install without it. That is safe here because this container only
+# resolves and downloads packages: the application itself only ever runs in the
+# Sail image, which is PHP 8.4.24 with the full extension set, and composer.lock
+# was resolved against that. Every other command in this script runs there.
 bootstrap_composer() {
     docker run --rm \
         -u "$(id -u):$(id -g)" \
         -e HOME=/tmp -e COMPOSER_HOME=/tmp/composer \
         -v "$PWD":/var/www/html -w /var/www/html \
-        "$BOOTSTRAP_IMAGE" composer "$@"
+        "$BOOTSTRAP_IMAGE" composer "$@" --ignore-platform-reqs
 }
 
 require_vendor() {
@@ -73,9 +80,13 @@ cmd_setup() {
     grep -q '^WWWUSER='  .env && sed -i "s/^WWWUSER=.*/WWWUSER=$uid/"  .env || printf 'WWWUSER=%s\n'  "$uid" >> .env
     grep -q '^WWWGROUP=' .env && sed -i "s/^WWWGROUP=.*/WWWGROUP=$gid/" .env || printf 'WWWGROUP=%s\n' "$gid" >> .env
 
-    if [ ! -d vendor ]; then
+    # Test for a *usable* install, not merely the directory: a previous run that
+    # failed part-way leaves vendor/ present but without vendor/bin, and skipping
+    # the install then fails later with a far more confusing error.
+    if [ ! -f vendor/autoload.php ] || [ ! -f "$SAIL" ]; then
         info "Installing PHP dependencies (throwaway container, no host PHP needed)..."
         bootstrap_composer install --no-interaction
+        [ -f "$SAIL" ] || die "composer install finished but $SAIL is still missing."
         ok "vendor/ ready"
     fi
 

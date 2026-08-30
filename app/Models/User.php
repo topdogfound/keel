@@ -22,6 +22,8 @@ use Illuminate\Support\Collection as SupportCollection;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -48,7 +50,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, HasTeams, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+    use HasFactory, HasRoles, HasTeams, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
         // Both traits define teams(). The application's meaning — the teams a
         // user belongs to — wins, because the whole product relies on it.
         // Spatie's (the teams a user holds roles in) stays reachable under a
@@ -115,5 +117,16 @@ class User extends Authenticatable implements FilamentUser, PasskeyUser
         } finally {
             app(PermissionRegistrar::class)->setPermissionsTeamId($previous);
         }
+    }
+
+    /**
+     * Audit identity changes. Credentials are never logged.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'current_team_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
     }
 }

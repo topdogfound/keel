@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -34,7 +36,7 @@ use Illuminate\Support\Carbon;
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
-    use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
+    use GeneratesUniqueTeamSlugs, HasFactory, LogsActivity, SoftDeletes;
 
     /**
      * Bootstrap the model and its traits.
@@ -109,5 +111,16 @@ class Team extends Model
         return [
             'is_personal' => 'boolean',
         ];
+    }
+
+    /**
+     * Record team changes so ownership and naming disputes are answerable.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'slug', 'is_personal'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
     }
 }

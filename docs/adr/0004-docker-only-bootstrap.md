@@ -42,6 +42,13 @@ libraries* but not the browsers. `npx playwright install chromium` must run
 after `npm install`, and again after `./keel node-reset`, since
 `PLAYWRIGHT_BROWSERS_PATH=0` puts them inside `node_modules`.
 
+**A misleading PHPStan error.** `Undefined constant LARAVEL_VERSION` from
+Larastan never points at its own cause: Larastan boots Laravel inside PHPStan's
+bootstrap and swallows any exception. It means either a stale result cache (the
+common case — `post-autoload-dump` clears it, but it can still go stale between
+dependency changes) or that the app genuinely cannot boot. Clear the cache
+first; if it survives that, run `./keel artisan about` for the real error.
+
 **`npm` must never run on the host.** `package.json` pins platform-specific
 native binaries (rollup, tailwind oxide, lightningcss). A `node_modules` built
 on macOS or Windows and bind-mounted into Linux fails at build time. `./keel

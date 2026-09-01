@@ -144,11 +144,16 @@ load error) — npm was run on the host. Fix with `./keel node-reset`.
 don't match your host user. Re-run `./keel setup`.
 
 **PHPStan fails with `Undefined constant "Larastan\Larastan\LARAVEL_VERSION"`**
-— this almost always means **the application cannot boot**, not that anything is
-wrong with PHPStan. Larastan boots Laravel inside PHPStan's bootstrap and
-swallows any exception, so a fatal in a service provider or model surfaces later
-as this unrelated-looking message. Run `./keel artisan about` to see the real
-error, fix that, and PHPStan goes green again.
+— Larastan boots Laravel inside PHPStan's bootstrap and swallows any exception,
+so this message never points at the real cause. Two things produce it:
+
+1. **A stale result cache** — the common case. Fix:
+   `./keel composer exec -- phpstan clear-result-cache`, then re-run.
+2. **The application genuinely cannot boot** — a fatal in a service provider or
+   model. If the error survives clearing the cache, run `./keel artisan about`;
+   that shows the real error.
+
+Always try the cache first, then check the boot.
 
 **HMR doesn't reload** — on some Docker Desktop setups bind-mount file events
 don't propagate. Set `VITE_USE_POLLING=1` in `.env` and restart `./keel dev`.

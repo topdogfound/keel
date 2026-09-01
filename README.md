@@ -30,6 +30,7 @@ builds the app image, starts the stack, migrates, seeds and builds assets.
 | Admin panel | http://localhost/admin |
 | Mailpit | http://localhost:8025 |
 | Database GUI | `./keel db-gui` → http://localhost:8081 |
+| Health | http://localhost/health (staff only) |
 
 Demo accounts are seeded with the password `password` — see `DemoSeeder`.
 
@@ -113,6 +114,16 @@ report ties straight back to what actually happened.
 
 OpenAPI docs are generated from the code with no annotations to maintain --
 browse them at `/docs/api` (local only, or staff elsewhere).
+
+## Health
+
+`/up` stays public for load balancers and only proves PHP is executing.
+`/health` and `/health.json` are staff-gated and report what actually breaks:
+database, cache, queue worker, scheduler and disk.
+
+The queue and scheduler checks only pass while the `horizon` and `scheduler`
+Compose services are running — that is deliberate. Sail ships neither, so
+without them scheduled and queued work silently never happens.
 
 ## Conventions
 

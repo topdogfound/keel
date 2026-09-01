@@ -26,7 +26,8 @@
         "spatie/laravel-data": "^4.23",
         "spatie/laravel-permission": "^8.3",
         "spatie/laravel-query-builder": "^7.3",
-        "spatie/laravel-typescript-transformer": "^3.3"
+        "spatie/laravel-typescript-transformer": "^3.3",
+        "tpetry/laravel-postgresql-enhanced": "^3.7"
     },
     "require-dev": {
         "driftingly/rector-laravel": "^2.6",

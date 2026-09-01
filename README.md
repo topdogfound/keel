@@ -68,6 +68,29 @@ Everything goes through `./keel`. Run `./keel help` for the full list.
 Renames the package, resets the app identity, strips demo content and starts a
 fresh git history.
 
+## Types shared with the frontend
+
+PHP is the source of truth for anything crossing into React. Mark a DTO or enum
+with `#[TypeScript]` and it is emitted into `resources/js/types/generated.d.ts`
+as `App.Data.*` / `App.Enums.*`:
+
+```php
+#[TypeScript]
+readonly class UserTeam
+{
+    public function __construct(public int $id, public string $name) {}
+}
+```
+
+```ts
+const team: App.Data.UserTeam = props.team;
+```
+
+Regenerate with `./keel ts`. `./keel types` regenerates and then typechecks, and
+`./keel setup` and CI both do it before building. The file is gitignored, like
+Wayfinder's output -- renaming a property in PHP breaks the TypeScript build
+rather than reaching the browser as `undefined`.
+
 ## Conventions
 
 - **Never run `npm` on the host.** `package.json` pins platform-specific native

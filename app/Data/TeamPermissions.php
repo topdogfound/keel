@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Data;
 
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
+
+#[TypeScript]
 readonly class TeamPermissions
 {
     public function __construct(

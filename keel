@@ -108,8 +108,11 @@ cmd_setup() {
         info "Installing Playwright browsers..."
         "$SAIL" npx playwright install chromium
     fi
-    # Wayfinder, Inertia and the TypeScript transformer all generate sources at build
-    # time. They're gitignored, so a typecheck before the first build always fails.
+    # Wayfinder, Inertia and the TypeScript transformer all generate sources at
+    # build time. They're gitignored, so a typecheck before the first build
+    # always fails on unresolved imports.
+    info "Generating TypeScript types from PHP..."
+    "$SAIL" artisan typescript:transform --quiet
     info "Building frontend assets..."
     "$SAIL" npm run build
 
@@ -195,7 +198,7 @@ Keel — Docker-first Laravel monolith
 
   Lifecycle    setup [--fresh|--ci] · up · down · restart · fresh · doctor
   Develop      dev · build · shell · logs [svc] · artisan … · composer … · npm …
-  Quality      test · e2e · lint · types · rector · check
+  Quality      test · e2e · lint · types · ts · rector · check
   Data         migrate · seed · psql · redis · tinker · db-gui
   Maintenance  node-reset · new <vendor/name>
 
@@ -218,7 +221,8 @@ case "$cmd" in
     test)       sail composer test ;;
     e2e)        sail npx playwright test "$@" ;;
     lint)       sail composer lint ;;
-    types)      sail composer types:check ;;
+    types)      sail artisan typescript:transform --quiet && sail composer types:check ;;
+    ts)         sail artisan typescript:transform ;;
     rector)     sail php vendor/bin/rector process --dry-run "$@" ;;
     check)      sail composer ci:check ;;
     migrate)    sail artisan migrate "$@" ;;

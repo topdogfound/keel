@@ -21,7 +21,9 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "spatie/laravel-activitylog": "^5.1",
-        "spatie/laravel-permission": "^8.3"
+        "spatie/laravel-data": "^4.23",
+        "spatie/laravel-permission": "^8.3",
+        "spatie/laravel-typescript-transformer": "^3.3"
     },
     "require-dev": {
         "driftingly/rector-laravel": "^2.6",
@@ -59,6 +61,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
+            "@php artisan typescript:transform",
             "npm install",
             "npm run build"
         ],

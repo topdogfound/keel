@@ -7,6 +7,12 @@ import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
+// Host ports are defined once, in .env. compose.yaml forwards VITE_PORT into
+// the container so this file can read it; the fallback matches compose's own
+// default. Vite is published on the same port inside and out, because the
+// browser on the host connects to the HMR server directly.
+const vitePort = Number(process.env.VITE_PORT ?? 8766);
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -31,9 +37,9 @@ export default defineConfig({
     server: {
         // Vite runs inside the container; the browser is on the host.
         host: '0.0.0.0', // bind all interfaces, not just container loopback
-        port: 5173,
+        port: vitePort,
         strictPort: true,
-        origin: 'http://localhost:5173', // keeps 0.0.0.0 out of public/hot
+        origin: `http://localhost:${vitePort}`, // keeps 0.0.0.0 out of public/hot
         hmr: {
             host: 'localhost', // where the browser should connect back to
         },

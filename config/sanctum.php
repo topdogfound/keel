@@ -18,9 +18,14 @@ return [
     |
     */
 
+    // The stock list hardcodes :3000 and :8000, which this project never uses.
+    // The port now comes from APP_PORT, so it tracks the .env host-port block.
+    // Note there is deliberately no comma before %2$s: currentApplicationUrlWithPort()
+    // already returns a leading comma (or an empty string), and adding one here
+    // puts an empty entry in the list.
     'stateful' => explode(',', (string) env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+        'localhost,localhost:%1$s,127.0.0.1,127.0.0.1:%1$s,::1%2$s',
+        env('APP_PORT', '8765'),
         Sanctum::currentApplicationUrlWithPort(),
         // Sanctum::currentRequestHost(),
     ))),

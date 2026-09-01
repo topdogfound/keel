@@ -65,7 +65,7 @@ Docker. That's it.
 ./keel setup
 \`\`\`
 
-Then open http://localhost. Run \`./keel help\` for everything else,
+Then open http://localhost:8765. Run \`./keel help\` for everything else,
 or \`./keel doctor\` if something looks wrong.
 README
 

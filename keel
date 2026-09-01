@@ -37,6 +37,22 @@ bootstrap_composer() {
         "$BOOTSTRAP_IMAGE" composer "$@" --ignore-platform-reqs
 }
 
+# Read one key out of .env. Ports are defined there once and everything else --
+# compose, Vite, this script -- derives from it, so the banner and the doctor
+# scan must not carry their own copies of the numbers.
+#
+# Deliberately not `source .env`: that would execute arbitrary file contents and
+# trip over quoting. A real environment variable still wins, so
+# `APP_PORT=9000 ./keel doctor` behaves as you would expect.
+env_get() {
+    local key="$1" default="${2:-}" val
+    val="$(printenv "$key" 2>/dev/null || true)"
+    if [ -z "$val" ] && [ -f .env ]; then
+        val="$(sed -n "s/^${key}=//p" .env | tail -n1 | tr -d "\"' \t\r")"
+    fi
+    printf '%s' "${val:-$default}"
+}
+
 require_vendor() {
     [ -f "$SAIL" ] || die "vendor/ is missing. Run ${c_bld}./keel setup${c_off} first."
 }
@@ -68,7 +84,7 @@ cmd_setup() {
 
     if [ "$fresh" = 1 ]; then
         warn "--fresh: destroying containers and volumes (this drops the database)"
-        docker compose down -v --remove-orphans || true
+        docker compose --profile tools down -v --remove-orphans || true
     fi
 
     [ -f .env ] || { cp .env.example .env; ok "Created .env from .env.example"; }
@@ -124,10 +140,11 @@ cmd_setup() {
 
     echo
     ok "${c_bld}Keel is up.${c_off}"
-    printf '  %-14s http://localhost:%s\n' "App"     "${APP_PORT:-80}"
-    printf '  %-14s http://localhost:%s/admin\n'     "Admin"   "${APP_PORT:-80}"
-    printf '  %-14s http://localhost:8025\n'         "Mailpit"
-    printf '  %-14s ./keel db-gui  (http://localhost:8081)\n' "Database"
+    printf '  %-14s http://localhost:%s\n'       "App"     "$(env_get APP_PORT 8765)"
+    printf '  %-14s http://localhost:%s/admin\n' "Admin"   "$(env_get APP_PORT 8765)"
+    printf '  %-14s http://localhost:%s\n'       "Mailpit" "$(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767)"
+    printf '  %-14s http://localhost:%s  (while ./keel dev runs)\n' "Vite" "$(env_get VITE_PORT 8766)"
+    printf '  %-14s ./keel db-gui  (http://localhost:%s)\n' "Database" "$(env_get PGWEB_PORT 8768)"
     echo
 }
 
@@ -138,14 +155,22 @@ cmd_doctor() {
     if docker info >/dev/null 2>&1; then ok "Docker is running"
     else warn "Docker is not running — nothing else will work"; problems=$((problems+1)); fi
 
-    # Ports this project already publishes. Publishers renders as
-    # "[{0.0.0.0 80 80 tcp} ...]", so pull the published port from each tuple.
+    # Ports this project already publishes. Publishers renders each mapping as
+    # "{URL TargetPort PublishedPort Protocol}", e.g. "{0.0.0.0 80 8765 tcp}",
+    # so the published (host) port is field 3. Field 2 is the container port,
+    # which only matches the host port by coincidence.
     local ours
-    ours="$(docker compose ps --format '{{.Publishers}}' 2>/dev/null \
+    ours="$(docker compose --profile tools ps --format '{{.Publishers}}' 2>/dev/null \
         | grep -oE '\{[^}]+\}' \
-        | awk '{print $2}' | sort -u)"
+        | awk '{print $3}' | sort -u)"
 
-    for p in "${APP_PORT:-80}" "${VITE_PORT:-5173}" "${FORWARD_DB_PORT:-5432}" 8025; do
+    for p in "$(env_get APP_PORT 8765)" \
+             "$(env_get VITE_PORT 8766)" \
+             "$(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767)" \
+             "$(env_get PGWEB_PORT 8768)" \
+             "$(env_get FORWARD_DB_PORT 8769)" \
+             "$(env_get FORWARD_REDIS_PORT 8770)" \
+             "$(env_get FORWARD_MAILPIT_PORT 8771)"; do
         if command -v ss >/dev/null && ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$p$"; then
             if ! printf '%s\n' "$ours" | grep -qx "$p"; then
                 warn "Port $p is in use by something outside this project (override it in .env)"
@@ -182,6 +207,16 @@ cmd_doctor() {
             <(grep -oE '^[A-Z0-9_]+=' .env | sort -u) || true)"
         if [ -n "$missing" ]; then
             warn "Keys in .env.example but missing from .env:"; echo "$missing" | sed 's/=$/  /' | sed 's/^/      /'
+            problems=$((problems+1))
+        fi
+
+        # APP_URL is written by hand and APP_PORT is what actually gets
+        # published, so they drift. Every generated link is wrong when they do.
+        local app_port url_port
+        app_port="$(env_get APP_PORT 8765)"
+        url_port="$(sed -n 's|^APP_URL=.*localhost:\([0-9]*\).*|\1|p' .env | tail -n1)"
+        if [ -n "$url_port" ] && [ "$url_port" != "$app_port" ]; then
+            warn "APP_URL points at :$url_port but APP_PORT publishes :$app_port"
             problems=$((problems+1))
         fi
     else
@@ -226,7 +261,7 @@ case "$cmd" in
     setup)      cmd_setup "$@" ;;
     doctor)     cmd_doctor "$@" ;;
     up)         require_docker; sail up -d "$@" ;;
-    down)       docker compose down "$@" ;;
+    down)       docker compose --profile tools down "$@" ;;
     restart)    sail restart "$@" ;;
     fresh)      cmd_setup --fresh ;;
     shell)      sail shell ;;
@@ -246,7 +281,7 @@ case "$cmd" in
     redis)      sail redis ;;
     tinker)     sail tinker ;;
     db-gui)     require_docker; docker compose --profile tools up -d pgweb
-                ok "pgweb: http://localhost:${PGWEB_PORT:-8081}" ;;
+                ok "pgweb: http://localhost:$(env_get PGWEB_PORT 8768)" ;;
     cache-reset) info "Clearing container caches..."
                 docker compose exec -T laravel.test rm -rf /tmp/phpstan
                 sail artisan optimize:clear

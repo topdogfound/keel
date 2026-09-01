@@ -21,32 +21,33 @@ in `.env` (leave `.env.example` alone — it stays off by default) and run
 
 ### Where things live
 
-**One application, on port 80.** These are all routes inside the same Laravel
+**One application, on port 8765.** These are all routes inside the same Laravel
 app. Port 80 is the default for HTTP, so the browser hides it —
-`http://localhost` _is_ `http://localhost:80`.
+`http://localhost:8765` is the app; the paths below hang off it.
 
-| Surface         | URL                                           |
-| --------------- | --------------------------------------------- |
-| Product UI      | `http://localhost`                            |
-| Staff panel     | `http://localhost/admin`                      |
-| Role management | `http://localhost/admin/shield/roles`         |
-| Health          | `http://localhost/health` _(staff only)_      |
-| API docs        | `http://localhost/docs/api`                   |
-| Horizon         | `http://localhost/horizon`                    |
-| Telescope       | `http://localhost/telescope` _(once enabled)_ |
+| Surface         | URL                                                |
+| --------------- | -------------------------------------------------- |
+| Product UI      | `http://localhost:8765`                            |
+| Staff panel     | `http://localhost:8765/admin`                      |
+| Role management | `http://localhost:8765/admin/shield/roles`         |
+| Health          | `http://localhost:8765/health` _(staff only)_      |
+| API docs        | `http://localhost:8765/docs/api`                   |
+| Horizon         | `http://localhost:8765/horizon`                    |
+| Telescope       | `http://localhost:8765/telescope` _(once enabled)_ |
 
 **Separate containers, so their own ports.**
 
 | Service         | URL                                                      |
 | --------------- | -------------------------------------------------------- |
-| Mailpit         | `http://localhost:8025`                                  |
-| pgweb           | `http://localhost:8081`                                  |
-| Vite dev server | `http://localhost:5173` _(only while `./keel dev` runs)_ |
+| Mailpit         | `http://localhost:8767`                                  |
+| pgweb           | `http://localhost:8768`                                  |
+| Vite dev server | `http://localhost:8766` _(only while `./keel dev` runs)_ |
 
-> ⚠️ **If you set `APP_PORT` in `.env`, every URL in the first table gains that
-> port.** It is commented out and defaults to 80. Uncomment it — because 80 is
-> taken, or to avoid binding a privileged port — and `http://localhost/admin`
-> becomes `http://localhost:8000/admin`.
+> ⚠️ **Every port above comes from the "Host ports" block near the top of
+> `.env`** — one contiguous run of 8765-8771, chosen to avoid colliding with
+> whatever else you have running. Change `APP_PORT` there and every URL in the
+> first table follows, as do compose, Vite and the `./keel` banner. Don't touch
+> `DB_PORT`, `REDIS_PORT` or `MAIL_PORT`: those are container-internal.
 
 ### Accounts
 
@@ -78,7 +79,7 @@ at once. Several checks compare what different people see.
 
 | Do this                                 | Expect                                                                                 |
 | --------------------------------------- | -------------------------------------------------------------------------------------- |
-| Open `http://localhost`                 | Welcome page, Log in / Register links                                                  |
+| Open `http://localhost:8765`            | Welcome page, Log in / Register links                                                  |
 | Register a new account                  | Lands on a dashboard at `/{your-team}/dashboard` — a personal team was created for you |
 | Log out, log in as `owner@keel.test`    | Dashboard for Acme Corp                                                                |
 | `/settings/profile`                     | Name and email, editable                                                               |
@@ -96,7 +97,7 @@ As `owner@keel.test`, at `/settings/teams`.
 | Rename it                                   | Name updates; slug stays put                     |
 | Switch between teams                        | The dashboard URL changes to `/{slug}/dashboard` |
 | Invite `newperson@example.com` to Acme Corp | Invitation listed as pending                     |
-| Open **Mailpit** at `:8025`                 | The invitation email is there                    |
+| Open **Mailpit** at `:8767`                 | The invitation email is there                    |
 | Open the invite link, register, accept      | You join Acme Corp                               |
 | Back as owner: change that member's role    | Role updates                                     |
 | Remove them                                 | They disappear from the member list              |
@@ -119,10 +120,10 @@ and compare. This is `TeamPermission` made visible.
 The one that matters most. Stay logged in as `owner@keel.test` — who has no
 standing in Rival Industries — and try to reach it directly.
 
-| Do this                                            | Expect                                 |
-| -------------------------------------------------- | -------------------------------------- |
-| `http://localhost/rival-industries/dashboard`      | Refused — **never** renders their data |
-| `http://localhost/settings/teams/rival-industries` | Refused                                |
+| Do this                                                 | Expect                                 |
+| ------------------------------------------------------- | -------------------------------------- |
+| `http://localhost:8765/rival-industries/dashboard`      | Refused — **never** renders their data |
+| `http://localhost:8765/settings/teams/rival-industries` | Refused                                |
 
 Then confirm the mirror image: as `rival@keel.test`, `/acme-corp/dashboard` is
 equally refused.
@@ -156,7 +157,7 @@ Easy to get backwards, so check both ways.
 
 ## 7 · Inside PostgreSQL
 
-Use pgweb at `:8081`, or `./keel psql`.
+Use pgweb at `:8768`, or `./keel psql`.
 
 ```sql
 -- Emails are case-insensitive at the database level
@@ -207,21 +208,21 @@ Mint a token (there is no UI for this):
 TOKEN='paste-it-here'
 AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/json")
 
-curl -s "${AUTH[@]}" http://localhost/api/v1/user
-curl -s "${AUTH[@]}" http://localhost/api/v1/teams
+curl -s "${AUTH[@]}" http://localhost:8765/api/v1/user
+curl -s "${AUTH[@]}" http://localhost:8765/api/v1/teams
 ```
 
 > **Use `curl -g` for anything with `filter[...]`.** curl treats `[` and `]` as
 > glob characters and will silently return nothing otherwise.
 
 ```bash
-curl -sg "${AUTH[@]}" 'http://localhost/api/v1/teams?filter[name]=Acme'
-curl -sg "${AUTH[@]}" 'http://localhost/api/v1/teams?sort=-name'
-curl -sg "${AUTH[@]}" 'http://localhost/api/v1/teams?filter[is_personal]=0'
-curl -sg "${AUTH[@]}" 'http://localhost/api/v1/teams?per_page=5000'   # meta.per_page caps at 100
+curl -sg "${AUTH[@]}" 'http://localhost:8765/api/v1/teams?filter[name]=Acme'
+curl -sg "${AUTH[@]}" 'http://localhost:8765/api/v1/teams?sort=-name'
+curl -sg "${AUTH[@]}" 'http://localhost:8765/api/v1/teams?filter[is_personal]=0'
+curl -sg "${AUTH[@]}" 'http://localhost:8765/api/v1/teams?per_page=5000'   # meta.per_page caps at 100
 
-curl -s -H "Accept: application/json" http://localhost/api/v1/teams   # 401
-curl -s "${AUTH[@]}" http://localhost/api/v1/teams/rival-industries   # 403
+curl -s -H "Accept: application/json" http://localhost:8765/api/v1/teams   # 401
+curl -s "${AUTH[@]}" http://localhost:8765/api/v1/teams/rival-industries   # 403
 ```
 
 Every error uses one envelope, whatever the status:
@@ -240,7 +241,7 @@ Every error uses one envelope, whatever the status:
 That `request_id` also comes back in the `X-Request-Id` header and appears in the
 logs — a bug report ties straight back to what happened.
 
-Browsable docs, generated from the code: `http://localhost/docs/api`.
+Browsable docs, generated from the code: `http://localhost:8765/docs/api`.
 
 ## 11 · Queues and the scheduler
 
@@ -277,7 +278,7 @@ docker compose start horizon
 
 ## 13 · Mail
 
-Everything goes to Mailpit at `:8025`; nothing leaves your machine.
+Everything goes to Mailpit at `:8767`; nothing leaves your machine.
 
 | Do this                  | Expect                       |
 | ------------------------ | ---------------------------- |

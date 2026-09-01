@@ -24,13 +24,13 @@ git clone <your-repo> && cd <your-repo>
 That's the whole thing. It bootstraps dependencies in a throwaway container,
 builds the app image, starts the stack, migrates, seeds and builds assets.
 
-|              |                                         |
-| ------------ | --------------------------------------- |
-| App          | http://localhost                        |
-| Admin panel  | http://localhost/admin                  |
-| Mailpit      | http://localhost:8025                   |
-| Database GUI | `./keel db-gui` → http://localhost:8081 |
-| Health       | http://localhost/health (staff only)    |
+|              |                                           |
+| ------------ | ----------------------------------------- |
+| App          | http://localhost:8765                     |
+| Admin panel  | http://localhost:8765/admin               |
+| Mailpit      | http://localhost:8767                     |
+| Database GUI | `./keel db-gui` → http://localhost:8768   |
+| Health       | http://localhost:8765/health (staff only) |
 
 Demo accounts are seeded with the password `password` — see `DemoSeeder`.
 
@@ -158,8 +158,23 @@ Run `./keel doctor` first — it checks for most of the below automatically.
 **`Cannot find module @rollup/rollup-linux-x64-gnu`** (or a lightningcss/oxide
 load error) — npm was run on the host. Fix with `./keel node-reset`.
 
-**A port is already in use** — override it in `.env`: `APP_PORT`,
-`VITE_PORT`, `FORWARD_DB_PORT`, `PGWEB_PORT`.
+**A port is already in use** — every host port is defined once, in the
+"Host ports" block near the top of `.env`, as one contiguous run of 8765-8771
+picked to dodge the usual defaults:
+
+| Port | Service      | Variable                         |
+| ---- | ------------ | -------------------------------- |
+| 8765 | App          | `APP_PORT`                       |
+| 8766 | Vite / HMR   | `VITE_PORT`                      |
+| 8767 | Mailpit UI   | `FORWARD_MAILPIT_DASHBOARD_PORT` |
+| 8768 | pgweb        | `PGWEB_PORT`                     |
+| 8769 | PostgreSQL   | `FORWARD_DB_PORT`                |
+| 8770 | Redis        | `FORWARD_REDIS_PORT`             |
+| 8771 | Mailpit SMTP | `FORWARD_MAILPIT_PORT`           |
+
+Change the value there and compose, Vite and `./keel` all follow. `DB_PORT`,
+`REDIS_PORT` and `MAIL_PORT` are _container-internal_ and should stay as they
+are. `./keel doctor` reports any of these that a non-Keel process has taken.
 
 **Files created by artisan are owned by root** — `WWWUSER`/`WWWGROUP` in `.env`
 don't match your host user. Re-run `./keel setup`.

@@ -10,11 +10,22 @@ services:
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
-            - '${APP_PORT:-80}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+            # Left side is the host port from .env; right side is fixed inside
+            # the container. Vite is the exception: the browser runs on the host
+            # and talks to the HMR server directly, so it is the same number on
+            # both sides.
+            - '${APP_PORT:-8765}:80'
+            - '${VITE_PORT:-8766}:${VITE_PORT:-8766}'
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # vite.config.ts reads this. Deliberately passed one variable at a
+            # time rather than via `env_file: .env`: that would also inject the
+            # host-side APP_URL (http://localhost:8765) into the container,
+            # where 8765 does not exist, breaking Playwright's baseURL.
+            # Laravel reads .env itself off the bind mount, so it needs nothing
+            # here. Node processes do.
+            VITE_PORT: '${VITE_PORT:-8766}'
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
@@ -68,7 +79,7 @@ services:
     pgsql:
         image: 'postgres:18-alpine'
         ports:
-            - '${FORWARD_DB_PORT:-5432}:5432'
+            - '${FORWARD_DB_PORT:-8769}:5432'
         environment:
             PGPASSWORD: '${DB_PASSWORD:-secret}'
             POSTGRES_DB: '${DB_DATABASE}'
@@ -93,7 +104,7 @@ services:
     redis:
         image: 'redis:8-alpine'
         ports:
-            - '${FORWARD_REDIS_PORT:-6379}:6379'
+            - '${FORWARD_REDIS_PORT:-8770}:6379'
         volumes:
             - 'sail-redis:/data'
         networks:
@@ -108,17 +119,17 @@ services:
     mailpit:
         image: 'axllent/mailpit:latest'
         ports:
-            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+            - '${FORWARD_MAILPIT_PORT:-8771}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8767}:8025'
         networks:
             - sail
     pgweb:
         image: 'sosedoff/pgweb:latest'
         profiles: [tools]
         ports:
-            - '${PGWEB_PORT:-8081}:8081'
+            - '${PGWEB_PORT:-8768}:8081'
         environment:
-            PGWEB_DATABASE_URL: 'postgres://${DB_USERNAME}:${DB_PASSWORD}@pgsql:5432/${DB_DATABASE}?sslmode=disable'
+            PGWEB_DATABASE_URL: 'postgres://${DB_USERNAME}:${DB_PASSWORD}@pgsql:${DB_PORT:-5432}/${DB_DATABASE}?sslmode=disable'
         networks:
             - sail
         depends_on:

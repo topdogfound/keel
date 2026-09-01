@@ -56,6 +56,7 @@ Everything goes through `./keel`. Run `./keel help` for the full list.
 ./keel test               # Pint, PHPStan and the test suite
 ./keel shell              # a shell inside the app container
 ./keel artisan migrate    # any artisan command
+./keel e2e                # Playwright browser tests (+ accessibility)
 ./keel doctor             # diagnose a broken environment
 ```
 

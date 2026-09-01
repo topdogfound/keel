@@ -61,12 +61,23 @@ class DemoSeeder extends Seeder
         );
     }
 
+    /**
+     * Create a demo user the way registration would.
+     *
+     * The factory's afterCreating hook builds the personal team and points
+     * current_team_id at it. That matters more than it looks: the post-login
+     * redirect resolves the current team and aborts 403 when there isn't one,
+     * so a user seeded without a team cannot log in at all.
+     */
     private function user(string $name, string $email): User
     {
-        /** @var array<string, mixed> $attributes */
-        $attributes = User::factory()->raw(['name' => $name, 'email' => $email]);
+        $existing = User::where('email', $email)->first();
 
-        return User::firstOrCreate(['email' => $email], $attributes);
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        return User::factory()->create(['name' => $name, 'email' => $email]);
     }
 
     private function join(Team $team, User $user, TeamRole $role): void

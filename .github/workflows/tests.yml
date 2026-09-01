@@ -107,4 +107,10 @@ jobs:
       - name: Setup and test entirely inside Docker
         run: |
           ./keel setup --ci
-          docker compose exec -T laravel.test composer ci:check
+          # -u sail matters: docker compose exec defaults to root, while
+          # ./vendor/bin/sail runs as sail. Running as root here writes a
+          # root-owned /tmp/phpstan, and the next run as sail then dies on
+          # "Unable to create file ... .lock" -- an error that points at a lock
+          # file rather than at ownership. A parity job that runs as a different
+          # user than developers is not testing parity.
+          docker compose exec -T -u sail laravel.test composer ci:check

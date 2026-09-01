@@ -142,6 +142,9 @@ without them scheduled and queued work silently never happens.
 
 ## Documentation
 
+- [`docs/manual-testing.md`](docs/manual-testing.md) — a guided pass over every
+  surface: product UI, staff panel, tenant isolation, PostgreSQL, API, queues,
+  mail and health. Start here if you want to see what the template actually does.
 - [`docs/conventions.md`](docs/conventions.md) — how the code is organised, what
   the architecture tests enforce, and how to take upstream starter-kit changes.
 - [`docs/adr/`](docs/adr/) — why the non-obvious decisions are the way they are.

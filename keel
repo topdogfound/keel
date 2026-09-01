@@ -188,6 +188,17 @@ cmd_doctor() {
         warn ".env missing — run ./keel setup"; problems=$((problems+1))
     fi
 
+    # A root-owned analysis cache breaks every later run as the sail user, and
+    # the resulting error names a lock file rather than the ownership problem.
+    if docker compose ps --status running --quiet laravel.test 2>/dev/null | grep -q .; then
+        # -u sail is the whole point: plain exec runs as root, which can write
+        # anywhere, so the check would be defeated by the very bug it detects.
+        if docker compose exec -T -u sail laravel.test sh -c '[ -d /tmp/phpstan ] && [ ! -w /tmp/phpstan ]' 2>/dev/null; then
+            warn "PHPStan's cache is not writable by the app user (something ran as root). Fix: ./keel cache-reset"
+            problems=$((problems+1))
+        fi
+    fi
+
     if [ -f composer.lock ] && [ -d vendor ] && [ composer.lock -nt vendor ]; then
         warn "composer.lock is newer than vendor/ — run ./keel composer install"; problems=$((problems+1))
     fi
@@ -204,7 +215,7 @@ Keel — Docker-first Laravel monolith
   Develop      dev · build · shell · logs [svc] · artisan … · composer … · npm …
   Quality      test · e2e · lint · types · ts · rector · check
   Data         migrate · seed · psql · redis · tinker · db-gui
-  Maintenance  node-reset · new <vendor/name>
+  Maintenance  node-reset · cache-reset · new <vendor/name>
 
 Everything runs inside Docker. The host needs Docker and git — nothing else.
 USAGE
@@ -236,6 +247,10 @@ case "$cmd" in
     tinker)     sail tinker ;;
     db-gui)     require_docker; docker compose --profile tools up -d pgweb
                 ok "pgweb: http://localhost:${PGWEB_PORT:-8081}" ;;
+    cache-reset) info "Clearing container caches..."
+                docker compose exec -T laravel.test rm -rf /tmp/phpstan
+                sail artisan optimize:clear
+                ok "Caches cleared" ;;
     node-reset) info "Removing node_modules (host-side; it's a bind mount)..."
                 rm -rf node_modules package-lock.json
                 sail npm install

@@ -39,7 +39,11 @@ sed -i "s/^APP_NAME=.*/APP_NAME=\"$TITLE\"/" .env.example
 [ -f .env ] && sed -i "s/^APP_NAME=.*/APP_NAME=\"$TITLE\"/" .env
 
 # strip template-only content
-rm -rf docs/adr CHANGELOG.md
+# docs/ is deliberately kept. A new project inherits the permission scoping,
+# the tenant isolation and the bootstrap quirks, so it needs the reasoning too --
+# stripping the ADRs would hand someone the non-obvious code with none of the
+# explanation, which is the exact failure they exist to prevent.
+rm -f CHANGELOG.md
 rm -f database/seeders/DemoSeeder.php
 if [ -f database/seeders/DatabaseSeeder.php ]; then
     # Only the demo call goes. RolesAndPermissionsSeeder is infrastructure:

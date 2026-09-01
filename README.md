@@ -122,6 +122,14 @@ browse them at `/docs/api` (local only, or staff elsewhere).
   Always use `./keel npm`. If you slip, `./keel node-reset` fixes it.
 - **`./keel down -v` destroys the database.** Plain `./keel down` does not.
 
+## Documentation
+
+- [`docs/conventions.md`](docs/conventions.md) — how the code is organised, what
+  the architecture tests enforce, and how to take upstream starter-kit changes.
+- [`docs/adr/`](docs/adr/) — why the non-obvious decisions are the way they are.
+  Read these before "simplifying" the permission scoping or the tenant isolation;
+  the straightforward version was tried and did not work.
+
 ## Troubleshooting
 
 Run `./keel doctor` first — it checks for most of the below automatically.

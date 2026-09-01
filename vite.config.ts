@@ -79,6 +79,17 @@ export default defineConfig({
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
+            // Vendor-published assets. Filament publishes its compiled JS and
+            // CSS into public/, and format-checking someone else's build output
+            // fails CI over code this project does not own. lint.ignorePatterns
+            // already excluded these; fmt did not.
+            'public/**',
+            'vendor/**',
+            'node_modules/**',
+            'bootstrap/ssr/**',
+            // Generated at build time by the TypeScript transformer.
+            'resources/js/types/generated.d.ts',
+            'resources/js/types/typescript-transformer-manifest.json',
         ],
         sortTailwindcss: {
             functions: ['clsx', 'cn', 'cva'],

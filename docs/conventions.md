@@ -66,13 +66,13 @@ instead of arriving as `undefined`.
 This template has diverged from `laravel/react-starter-kit` deliberately, and
 these are the places a merge will conflict:
 
-| Area | Divergence |
-|---|---|
-| `app/Policies/TeamPolicy.php` | serves both product and staff (ADR 0003) |
-| `app/Models/User.php` | trait alias, staff helpers, `canAccessPanel` |
-| `bootstrap/app.php` | request ids, permission scope, API error envelope |
-| `database/seeders/` | roles are infrastructure, demo data is separate |
-| every `app/` file | `declare(strict_types=1)` |
+| Area                          | Divergence                                        |
+| ----------------------------- | ------------------------------------------------- |
+| `app/Policies/TeamPolicy.php` | serves both product and staff (ADR 0003)          |
+| `app/Models/User.php`         | trait alias, staff helpers, `canAccessPanel`      |
+| `bootstrap/app.php`           | request ids, permission scope, API error envelope |
+| `database/seeders/`           | roles are infrastructure, demo data is separate   |
+| every `app/` file             | `declare(strict_types=1)`                         |
 
 Take upstream changes as a diff to review, not a merge to accept. Re-run
 `./keel test` and the browser suite afterwards.

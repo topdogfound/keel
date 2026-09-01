@@ -24,27 +24,27 @@ git clone <your-repo> && cd <your-repo>
 That's the whole thing. It bootstraps dependencies in a throwaway container,
 builds the app image, starts the stack, migrates, seeds and builds assets.
 
-| | |
-|---|---|
-| App | http://localhost |
-| Admin panel | http://localhost/admin |
-| Mailpit | http://localhost:8025 |
+|              |                                         |
+| ------------ | --------------------------------------- |
+| App          | http://localhost                        |
+| Admin panel  | http://localhost/admin                  |
+| Mailpit      | http://localhost:8025                   |
 | Database GUI | `./keel db-gui` → http://localhost:8081 |
-| Health | http://localhost/health (staff only) |
+| Health       | http://localhost/health (staff only)    |
 
 Demo accounts are seeded with the password `password` — see `DemoSeeder`.
 
 ## The stack
 
-| Layer | Choice |
-|---|---|
-| Framework | Laravel 13 on PHP 8.4 |
-| Product UI | Inertia v3 + React 19 + TypeScript + Tailwind 4 |
-| Auth | Fortify — password, 2FA, passkeys — with teams and invitations |
-| Database | PostgreSQL 18 |
-| Cache / queue | Redis |
-| Mail | Mailpit (local capture) |
-| Local env | Laravel Sail |
+| Layer         | Choice                                                         |
+| ------------- | -------------------------------------------------------------- |
+| Framework     | Laravel 13 on PHP 8.4                                          |
+| Product UI    | Inertia v3 + React 19 + TypeScript + Tailwind 4                |
+| Auth          | Fortify — password, 2FA, passkeys — with teams and invitations |
+| Database      | PostgreSQL 18                                                  |
+| Cache / queue | Redis                                                          |
+| Mail          | Mailpit (local capture)                                        |
+| Local env     | Laravel Sail                                                   |
 
 ## Commands
 
@@ -106,7 +106,14 @@ GET /api/v1/teams?filter[name]=acme&sort=-created_at&per_page=25
 Errors use a single envelope, whatever the status:
 
 ```json
-{ "error": { "status": 403, "message": "...", "errors": null, "request_id": "..." } }
+{
+    "error": {
+        "status": 403,
+        "message": "...",
+        "errors": null,
+        "request_id": "..."
+    }
+}
 ```
 
 That `request_id` is the same one in `X-Request-Id` and in the logs, so a bug

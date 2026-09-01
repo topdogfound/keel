@@ -17,7 +17,7 @@ container, then hands off to Sail for everything else.
 ## The non-obvious parts
 
 **`--ignore-platform-reqs` is required, not sloppy.** The bootstrap image ships
-PHP 8.4.1 *without* `ext-intl`, which `filament/support` requires, so a fresh
+PHP 8.4.1 _without_ `ext-intl`, which `filament/support` requires, so a fresh
 clone cannot install without it. It is safe because that container only resolves
 and downloads packages: the application only ever runs in the Sail image
 (PHP 8.4.24, full extension set), which is what `composer.lock` was resolved
@@ -37,8 +37,8 @@ transformer all generate sources at build time, and all are gitignored. A
 typecheck before the first build fails on unresolved imports. `./keel setup` and
 CI both generate, then build, then check — do not reorder.
 
-**Playwright's browsers are not in the image.** Sail installs Playwright's *OS
-libraries* but not the browsers. `npx playwright install chromium` must run
+**Playwright's browsers are not in the image.** Sail installs Playwright's _OS
+libraries_ but not the browsers. `npx playwright install chromium` must run
 after `npm install`, and again after `./keel node-reset`, since
 `PLAYWRIGHT_BROWSERS_PATH=0` puts them inside `node_modules`.
 

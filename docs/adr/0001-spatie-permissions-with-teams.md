@@ -6,7 +6,7 @@
 
 The application has two kinds of authority:
 
-- **Tenant authority** — what a member may do inside *their* team.
+- **Tenant authority** — what a member may do inside _their_ team.
 - **Staff authority** — what the people running the product may do in `/admin`,
   across every tenant.
 
@@ -18,10 +18,10 @@ to assign them with `team_id = null`, meaning "not any team".
 
 That is not possible. In the published schema:
 
-- `roles.team_id` **is** nullable — a *role definition* can be global, meaning
+- `roles.team_id` **is** nullable — a _role definition_ can be global, meaning
   it is available to every team.
 - `model_has_roles.team_id` is **NOT NULL and part of the primary key** — every
-  *assignment* must name a team.
+  _assignment_ must name a team.
 
 So a null-scoped assignment cannot be stored at all.
 

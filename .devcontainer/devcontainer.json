@@ -32,7 +32,9 @@
                     "**/vendor/**/{Tests,tests}/**"
                 ],
                 "editor.formatOnSave": true,
-                "[php]": { "editor.defaultFormatter": "laravel.vscode-laravel" },
+                "[php]": {
+                    "editor.defaultFormatter": "laravel.vscode-laravel"
+                },
                 "files.eol": "\n"
             }
         }
@@ -40,7 +42,7 @@
 
     "forwardPorts": [80, 5173, 8025, 5432, 8081],
     "portsAttributes": {
-        "80":   { "label": "App" },
+        "80": { "label": "App" },
         "5173": { "label": "Vite" },
         "8025": { "label": "Mailpit" },
         "5432": { "label": "PostgreSQL" },

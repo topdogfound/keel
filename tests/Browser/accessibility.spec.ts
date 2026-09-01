@@ -15,10 +15,14 @@ async function scan(page: import('@playwright/test').Page) {
         .withTags(['wcag2a', 'wcag2aa'])
         .analyze();
 
-    return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    return results.violations.filter(
+        (v) => v.impact === 'serious' || v.impact === 'critical',
+    );
 }
 
-test('the login page has no serious accessibility violations', async ({ page }) => {
+test('the login page has no serious accessibility violations', async ({
+    page,
+}) => {
     await page.goto('/login');
 
     const violations = await scan(page);
@@ -26,7 +30,9 @@ test('the login page has no serious accessibility violations', async ({ page }) 
     expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 });
 
-test('the registration page has no serious accessibility violations', async ({ page }) => {
+test('the registration page has no serious accessibility violations', async ({
+    page,
+}) => {
     await page.goto('/register');
 
     const violations = await scan(page);
@@ -34,7 +40,9 @@ test('the registration page has no serious accessibility violations', async ({ p
     expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 });
 
-test('the dashboard has no serious accessibility violations', async ({ page }) => {
+test('the dashboard has no serious accessibility violations', async ({
+    page,
+}) => {
     await logIn(page, 'owner@keel.test');
     await expect(page).not.toHaveURL(/\/login/);
 

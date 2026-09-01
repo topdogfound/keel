@@ -4,8 +4,8 @@
 
 ## Context
 
-The starter kit ships `EnsureTeamMembership`, which guards *which pages* a user
-can reach. It has no effect on *what a query returns*. Nothing in the kit stops
+The starter kit ships `EnsureTeamMembership`, which guards _which pages_ a user
+can reach. It has no effect on _what a query returns_. Nothing in the kit stops
 `Invoice::all()` from returning every tenant's rows the moment a model is added.
 
 Route guards are not data isolation. This is the failure with the largest blast
@@ -15,7 +15,7 @@ renders, and the wrong customer's data is on screen.
 ## Decision
 
 `App\Concerns\BelongsToTeam` adds a global scope filtering to the current team,
-and fills `team_id` on create — so the safe path is the *default* path rather
+and fills `team_id` on create — so the safe path is the _default_ path rather
 than something each developer must remember.
 
 `App\Support\CurrentTeam` resolves the acting team, and is overridable so
@@ -59,5 +59,5 @@ has a unique slug, which is its public key.
 ## Verify it still holds
 
 `tests/Feature/Architecture/TenantIsolationTest.php` — proves the scope covers
-selects, counts *and* deletes, and that another team's row is invisible to
+selects, counts _and_ deletes, and that another team's row is invisible to
 `find()` (so lookups 404 rather than 403, which would confirm the row exists).

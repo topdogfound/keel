@@ -36,7 +36,7 @@ staff half by invoking `shield:generate`.
 - `TeamPolicy` checks Shield's names as **plain strings** in its staff branches.
   That is deliberate — they are Shield's to regenerate, not ours to declare.
 - The seeder must call `shield:generate` with `--option=permissions` and
-  `--ignore-existing-policies`. The bare command also regenerates *policies*,
+  `--ignore-existing-policies`. The bare command also regenerates _policies_,
   and it will happily overwrite a hand-written one — see ADR 0003.
 - Adding a Filament resource automatically adds its staff permissions on the
   next seed. Adding a tenant capability means adding an enum case.

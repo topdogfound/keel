@@ -8,10 +8,6 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    // Deliberately NOT using WithoutModelEvents: Team::slug is NOT NULL and is
-    // populated by a `creating` model event, so suppressing events makes seeding
-    // fail on a not-null violation.
-
     /**
      * Seed the application's database.
      */

@@ -35,8 +35,6 @@ class UsersTable
                 TextColumn::make('two_factor_confirmed_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('currentTeam.name')
-                    ->searchable(),
             ])
             ->filters([
                 //

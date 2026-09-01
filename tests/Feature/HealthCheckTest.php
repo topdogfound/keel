@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\StaffRole;
 use App\Models\User;
-use App\Support\PermissionScope;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Spatie\Health\Facades\Health;
 
@@ -35,7 +34,6 @@ it('refuses health output to a non-staff user', function (): void {
 
 it('shows health output to staff', function (): void {
     $staff = User::factory()->create();
-    PermissionScope::global();
     $staff->assignRole(StaffRole::SuperAdmin->value);
 
     $this->actingAs($staff)->get('/health')->assertSuccessful();

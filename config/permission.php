@@ -1,6 +1,5 @@
 <?php
 
-use Spatie\Permission\DefaultTeamResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -29,13 +28,6 @@ return [
          */
 
         'role' => Role::class,
-
-        /*
-         * When using the "Teams" feature from this package, we need to know which
-         * Eloquent model should be used to retrieve your teams. Of course, it
-         * is often just the "Team" model but you may use whatever you like.
-         */
-        'team' => null,
 
         /*
          * When using the "HasModels" trait and passing raw IDs to syncModels,
@@ -104,13 +96,6 @@ return [
          */
 
         'model_morph_key' => 'model_id',
-
-        /*
-         * Change this if you want to use the teams feature and your related model's
-         * foreign key is other than `team_id`.
-         */
-
-        'team_foreign_key' => 'team_id',
     ],
 
     /*
@@ -137,23 +122,6 @@ return [
      * To enable, set to true, and then create listeners to watch these events.
      */
     'events_enabled' => false,
-
-    /*
-     * Teams Feature.
-     * When set to true the package implements teams using the 'team_foreign_key'.
-     * If you want the migrations to register the 'team_foreign_key', you must
-     * set this to true before doing the migration.
-     * If you already did the migration then you must make a new migration to also
-     * add 'team_foreign_key' to 'roles', 'model_has_roles', and 'model_has_permissions'
-     * (view the latest version of this package's migration file)
-     */
-
-    'teams' => true,
-
-    /*
-     * The class to use to resolve the permissions team id
-     */
-    'team_resolver' => DefaultTeamResolver::class,
 
     /*
      * Passport Client Credentials Grant

@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\SetPermissionsTeamContext;
-use App\Http\Middleware\SetTeamUrlDefaults;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
@@ -36,8 +34,6 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            SetTeamUrlDefaults::class,
-            SetPermissionsTeamContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

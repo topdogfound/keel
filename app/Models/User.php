@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Concerns\HasTeams;
 use App\Enums\StaffRole;
-use App\Support\PermissionScope;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,7 +22,6 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
-use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -38,27 +34,15 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
- * @property int|null $current_team_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Team|null $currentTeam
- * @property-read Collection<int, Team> $ownedTeams
- * @property-read Collection<int, Membership> $teamMemberships
- * @property-read Collection<int, Team> $teams
  */
-#[Fillable(['name', 'email', 'password', 'current_team_id'])]
+#[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, HasTeams, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
-        // Both traits define teams(). The application's meaning — the teams a
-        // user belongs to — wins, because the whole product relies on it.
-        // Spatie's (the teams a user holds roles in) stays reachable under a
-        // non-colliding name.
-        HasTeams::teams insteadof HasRoles;
-        HasRoles::teams as permissionTeams;
-    }
+    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -86,10 +70,7 @@ class User extends Authenticatable implements FilamentUser, PasskeyUser
     }
 
     /**
-     * Whether the user holds any global staff role.
-     *
-     * Staff roles live under PermissionScope::GLOBAL, so this check is made in
-     * that scope regardless of whichever team the request is currently in.
+     * Whether the user holds any staff role.
      */
     public function isStaff(): bool
     {
@@ -106,18 +87,7 @@ class User extends Authenticatable implements FilamentUser, PasskeyUser
      */
     public function staffRoleNames(): SupportCollection
     {
-        $previous = PermissionScope::current();
-
-        PermissionScope::global();
-
-        try {
-            /** @var SupportCollection<int, string> $names */
-            $names = $this->roles()->pluck('name');
-
-            return $names;
-        } finally {
-            app(PermissionRegistrar::class)->setPermissionsTeamId($previous);
-        }
+        return $this->roles()->pluck('name');
     }
 
     /**
@@ -126,7 +96,7 @@ class User extends Authenticatable implements FilamentUser, PasskeyUser
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'current_team_id'])
+            ->logOnly(['name', 'email'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }

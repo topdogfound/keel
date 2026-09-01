@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\StaffRole;
 use App\Models\User;
-use App\Support\PermissionScope;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Gate;
 
@@ -15,7 +14,6 @@ beforeEach(function (): void {
 function staffUser(): User
 {
     $user = User::factory()->create();
-    PermissionScope::global();
     $user->assignRole(StaffRole::SuperAdmin->value);
 
     return $user;

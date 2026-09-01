@@ -7,14 +7,45 @@ namespace App\Policies;
 use App\Enums\TeamPermission;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\PermissionScope;
 
+/**
+ * One policy, two callers.
+ *
+ * The product UI and the staff panel are two presentations over the same
+ * domain, so they must share an authorisation surface rather than each
+ * inventing one -- a Filament resource that answers "can this staff member
+ * edit any team?" with different logic to the product's "can this member edit
+ * their own team?" is exactly the drift this template exists to prevent.
+ *
+ * They are told apart by the active permission scope, which the middleware
+ * already sets: PermissionScope::GLOBAL for /admin, the team id for product
+ * routes.
+ *
+ * Staff branches check Filament Shield's generated permission names as plain
+ * strings, because Shield owns and regenerates that vocabulary. Product
+ * branches check the typed TeamPermission enum, which is application code.
+ * StaffPermissionsMatchShieldTest guards the staff strings against drift.
+ */
 class TeamPolicy
 {
+    /**
+     * Whether this request is the staff panel acting outside any tenant.
+     */
+    private function actingAsStaff(User $user): bool
+    {
+        return PermissionScope::current() === PermissionScope::GLOBAL && $user->isStaff();
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
+        if ($this->actingAsStaff($user)) {
+            return $user->can('ViewAny:Team');
+        }
+
         return true;
     }
 
@@ -23,6 +54,10 @@ class TeamPolicy
      */
     public function view(User $user, Team $team): bool
     {
+        if ($this->actingAsStaff($user)) {
+            return $user->can('View:Team');
+        }
+
         return $user->belongsToTeam($team);
     }
 
@@ -39,6 +74,10 @@ class TeamPolicy
      */
     public function update(User $user, Team $team): bool
     {
+        if ($this->actingAsStaff($user)) {
+            return $user->can('Update:Team');
+        }
+
         return $user->hasTeamPermission($team, TeamPermission::UpdateTeam);
     }
 
@@ -97,6 +136,10 @@ class TeamPolicy
      */
     public function delete(User $user, Team $team): bool
     {
+        if ($this->actingAsStaff($user)) {
+            return $user->can('Delete:Team');
+        }
+
         return ! $team->is_personal && $user->hasTeamPermission($team, TeamPermission::DeleteTeam);
     }
 }

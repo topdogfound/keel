@@ -40,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
     protected function configureAuthorizationGates(): void
     {
         Gate::define('viewPulse', fn (?User $user = null): bool => $user?->isStaff() ?? false);
+
+        // Scramble allows the local environment outright and falls back to this
+        // gate elsewhere. Undefined it would deny everyone, which is safe but
+        // makes the docs unreachable in staging.
+        Gate::define('viewApiDocs', fn (?User $user = null): bool => $user?->isStaff() ?? false);
     }
 
     /**

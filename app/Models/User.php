@@ -22,6 +22,7 @@ use Illuminate\Support\Collection as SupportCollection;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Permission\PermissionRegistrar;
@@ -50,7 +51,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, HasTeams, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+    use HasApiTokens, HasFactory, HasRoles, HasTeams, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
         // Both traits define teams(). The application's meaning — the teams a
         // user belongs to — wins, because the whole product relies on it.
         // Spatie's (the teams a user holds roles in) stays reachable under a

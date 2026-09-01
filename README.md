@@ -91,6 +91,28 @@ Regenerate with `./keel ts`. `./keel types` regenerates and then typechecks, and
 Wayfinder's output -- renaming a property in PHP breaks the TypeScript build
 rather than reaching the browser as `undefined`.
 
+## API
+
+Versioned from the first endpoint at `/api/v1`, authenticated with Sanctum
+tokens. Every collection endpoint shares one query-string vocabulary via
+`spatie/laravel-query-builder`:
+
+```
+GET /api/v1/teams?filter[name]=acme&sort=-created_at&per_page=25
+```
+
+Errors use a single envelope, whatever the status:
+
+```json
+{ "error": { "status": 403, "message": "...", "errors": null, "request_id": "..." } }
+```
+
+That `request_id` is the same one in `X-Request-Id` and in the logs, so a bug
+report ties straight back to what actually happened.
+
+OpenAPI docs are generated from the code with no annotations to maintain --
+browse them at `/docs/api` (local only, or staff elsewhere).
+
 ## Conventions
 
 - **Never run `npm` on the host.** `package.json` pins platform-specific native

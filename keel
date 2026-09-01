@@ -112,6 +112,10 @@ cmd_setup() {
     # build time. They're gitignored, so a typecheck before the first build
     # always fails on unresolved imports.
     info "Generating TypeScript types from PHP..."
+    # The transformer writes into resources/js/types, which normally exists
+    # because tracked sources live there. Creating it anyway costs nothing and
+    # avoids aborting the whole of setup on a confusing error if it is missing.
+    mkdir -p resources/js/types
     "$SAIL" artisan typescript:transform --quiet
     info "Building frontend assets..."
     "$SAIL" npm run build

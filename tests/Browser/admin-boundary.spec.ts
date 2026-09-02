@@ -12,7 +12,7 @@ test('a guest is sent to the panel login', async ({ page }) => {
     await expect(page).toHaveURL(/\/admin\/login/);
 });
 
-test('an ordinary team member is refused the staff panel', async ({ page }) => {
+test('an ordinary user is refused the staff panel', async ({ page }) => {
     await logIn(page, 'member@keel.test');
     await expect(page).not.toHaveURL(/\/login/);
 

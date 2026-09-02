@@ -1,6 +1,13 @@
 # 0001 — Spatie permissions with teams, and the reserved global scope
 
-**Status:** accepted
+**Status:** superseded by [0006](0006-single-user-domain.md)
+
+> The team feature was removed in `a6ee452`, and with it `PermissionScope`,
+> `SetPermissionsTeamContext`, `SetGlobalPermissionsContext` and `HasTeams`.
+> `config/permission.php` no longer enables team scoping, so nothing below is
+> live code. The record is kept because the schema constraint it documents is a
+> property of `spatie/laravel-permission` itself, not of this application —
+> anyone turning `'teams' => true` back on will hit it again on day one.
 
 ## Context
 

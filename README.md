@@ -17,7 +17,7 @@ team gets a byte-identical environment regardless of what their laptop looks lik
 ## Getting started
 
 ```bash
-git clone <your-repo> && cd <your-repo>
+git clone https://github.com/topdogfound/keel.git && cd keel
 ./keel setup
 ```
 
@@ -27,24 +27,37 @@ builds the app image, starts the stack, migrates, seeds and builds assets.
 |              |                                           |
 | ------------ | ----------------------------------------- |
 | App          | http://localhost:8765                     |
-| Admin panel  | http://localhost:8765/admin               |
+| Staff panel  | http://localhost:8765/admin               |
 | Mailpit      | http://localhost:8767                     |
 | Database GUI | `./keel db-gui` → http://localhost:8768   |
 | Health       | http://localhost:8765/health (staff only) |
 
-Demo accounts are seeded with the password `password` — see `DemoSeeder`.
+Demo accounts are seeded with the password `password`:
+
+| Account                 | Can reach `/admin` as         |
+| ----------------------- | ----------------------------- |
+| `super_admin@keel.test` | Super Admin — full access     |
+| `support@keel.test`     | Support — read-only           |
+| `member@keel.test`      | — an ordinary user, no access |
+
+See `DemoSeeder`; `./keel new` removes it.
 
 ## The stack
 
-| Layer         | Choice                                                         |
-| ------------- | -------------------------------------------------------------- |
-| Framework     | Laravel 13 on PHP 8.4                                          |
-| Product UI    | Inertia v3 + React 19 + TypeScript + Tailwind 4                |
-| Auth          | Fortify — password, 2FA, passkeys — with teams and invitations |
-| Database      | PostgreSQL 18                                                  |
-| Cache / queue | Redis                                                          |
-| Mail          | Mailpit (local capture)                                        |
-| Local env     | Laravel Sail                                                   |
+| Layer         | Choice                                          |
+| ------------- | ----------------------------------------------- |
+| Framework     | Laravel 13 on PHP 8.4                           |
+| Product UI    | Inertia v3 + React 19 + TypeScript + Tailwind 4 |
+| Staff panel   | Filament 5 with Shield, at `/admin`             |
+| Auth          | Fortify — password, 2FA, passkeys               |
+| Database      | PostgreSQL 18                                   |
+| Cache / queue | Redis                                           |
+| Mail          | Mailpit (local capture)                         |
+| Local env     | Laravel Sail                                    |
+
+The domain is deliberately small: one `User` model and a `StaffRole` enum. Teams,
+tenancy and billing are things you add for your product, not things the template
+decides for you — see [ADR 0006](docs/adr/0006-single-user-domain.md).
 
 ### Which services run
 
@@ -95,7 +108,8 @@ Everything goes through `./keel`. Run `./keel help` for the full list.
 ```
 
 Renames the package, resets the app identity, strips demo content and starts a
-fresh git history.
+fresh git history. `docs/` is kept on purpose — the new project inherits the
+non-obvious decisions along with the code that depends on them.
 
 ## Types shared with the frontend
 
@@ -105,15 +119,18 @@ as `App.Data.*` / `App.Enums.*`:
 
 ```php
 #[TypeScript]
-readonly class UserTeam
+readonly class DashboardStats
 {
-    public function __construct(public int $id, public string $name) {}
+    public function __construct(public int $userCount, public string $generatedAt) {}
 }
 ```
 
 ```ts
-const team: App.Data.UserTeam = props.team;
+const stats: App.Data.DashboardStats = props.stats;
 ```
+
+`App.Enums.StaffRole` is currently the only generated type — the template ships
+the pipeline, not a pile of DTOs to delete.
 
 Regenerate with `./keel ts`. `./keel types` regenerates and then typechecks, and
 `./keel setup` and CI both do it before building. The file is gitignored, like
@@ -123,12 +140,18 @@ rather than reaching the browser as `undefined`.
 ## API
 
 Versioned from the first endpoint at `/api/v1`, authenticated with Sanctum
-tokens. Every collection endpoint shares one query-string vocabulary via
-`spatie/laravel-query-builder`:
+tokens. Versioned from the _first_ endpoint deliberately: a breaking change later
+means adding v2 rather than negotiating with every existing client.
+
+Today that is one endpoint:
 
 ```
-GET /api/v1/teams?filter[name]=acme&sort=-created_at&per_page=25
+GET /api/v1/user
 ```
+
+`App\Http\Controllers\Api\V1\ApiController` is the base your controllers extend,
+with `ok()` and `noContent()` helpers so responses stay uniform as endpoints are
+added.
 
 Errors use a single envelope, whatever the status:
 
@@ -169,14 +192,19 @@ without them scheduled and queued work silently never happens.
 
 ## Documentation
 
+- [`docs/architecture.md`](docs/architecture.md) — what the template ships and
+  how a request moves through it: the two presentations, auth, authorization,
+  generated code, health.
 - [`docs/manual-testing.md`](docs/manual-testing.md) — a guided pass over every
-  surface: product UI, staff panel, tenant isolation, PostgreSQL, API, queues,
-  mail and health. Start here if you want to see what the template actually does.
+  surface: product UI, staff panel, PostgreSQL, API, queues, mail and health.
+  Start here if you want to see what the template actually does.
 - [`docs/conventions.md`](docs/conventions.md) — how the code is organised, what
   the architecture tests enforce, and how to take upstream starter-kit changes.
 - [`docs/adr/`](docs/adr/) — why the non-obvious decisions are the way they are.
-  Read these before "simplifying" the permission scoping or the tenant isolation;
-  the straightforward version was tried and did not work.
+  Read the relevant one before "simplifying" the bootstrap, the service profiles
+  or the staff permission model; the straightforward version was tried and did
+  not work.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the loop to run before you push.
 
 ## Troubleshooting
 
@@ -222,3 +250,7 @@ Always try the cache first, then check the boot.
 
 **HMR doesn't reload** — on some Docker Desktop setups bind-mount file events
 don't propagate. Set `VITE_USE_POLLING=1` in `.env` and restart `./keel dev`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

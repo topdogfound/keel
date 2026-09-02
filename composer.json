@@ -1,11 +1,15 @@
 {
-    "name": "laravel/react-starter-kit",
-    "description": "The skeleton application for the Laravel framework.",
+    "name": "topdogfound/keel",
+    "description": "A Docker-first Laravel monolith template: Inertia + React product UI, a Filament staff panel, and one command to start.",
     "license": "MIT",
     "type": "project",
     "keywords": [
         "laravel",
-        "framework"
+        "template",
+        "docker",
+        "inertia",
+        "react",
+        "filament"
     ],
     "require": {
         "php": "^8.3",

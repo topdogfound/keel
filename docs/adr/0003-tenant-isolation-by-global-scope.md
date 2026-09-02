@@ -1,6 +1,13 @@
 # 0003 — Tenant isolation via a global scope, not route guards
 
-**Status:** accepted
+**Status:** superseded by [0006](0006-single-user-domain.md)
+
+> The team feature was removed in `a6ee452`. `BelongsToTeam`, `TeamScope`,
+> `CurrentTeam`, `Membership`, `TeamInvitation`, `make:tenant-model` and
+> `tests/Feature/Architecture/TenantIsolationTest.php` are all deleted, so
+> nothing below is live code. The record is kept because the argument it makes —
+> route guards are not data isolation — is what you need before adding tenancy
+> to a project built from this template. Read it as a design, not a description.
 
 ## Context
 

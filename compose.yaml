@@ -33,18 +33,27 @@ services:
             - '.:/var/www/html'
         networks:
             - sail
+        # Long syntax with `required: false` so the app still starts when a
+        # service is externalised via KEEL_SERVICES (e.g. a host Postgres). When
+        # the service IS enabled, Compose still starts it here and waits on the
+        # condition below.
         depends_on:
             pgsql:
                 condition: service_healthy
+                required: false
             redis:
                 condition: service_healthy
+                required: false
             mailpit:
                 condition: service_started
+                required: false
     horizon:
         image: 'sail-8.4/app'
         pull_policy: never
         command: ['php', 'artisan', 'horizon']
         restart: unless-stopped
+        # Named after the service so KEEL_SERVICES (-> COMPOSE_PROFILES) toggles it.
+        profiles: [horizon]
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
@@ -57,13 +66,16 @@ services:
                 condition: service_started
             pgsql:
                 condition: service_healthy
+                required: false
             redis:
                 condition: service_healthy
+                required: false
     scheduler:
         image: 'sail-8.4/app'
         pull_policy: never
         command: ['php', 'artisan', 'schedule:work']
         restart: unless-stopped
+        profiles: [scheduler]
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
@@ -76,8 +88,10 @@ services:
                 condition: service_started
             pgsql:
                 condition: service_healthy
+                required: false
     pgsql:
         image: 'postgres:18-alpine'
+        profiles: [pgsql]
         ports:
             - '${FORWARD_DB_PORT:-8769}:5432'
         environment:
@@ -103,6 +117,7 @@ services:
             timeout: 5s
     redis:
         image: 'redis:8-alpine'
+        profiles: [redis]
         ports:
             - '${FORWARD_REDIS_PORT:-8770}:6379'
         volumes:
@@ -118,6 +133,7 @@ services:
             timeout: 5s
     mailpit:
         image: 'axllent/mailpit:latest'
+        profiles: [mailpit]
         ports:
             - '${FORWARD_MAILPIT_PORT:-8771}:1025'
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8767}:8025'
@@ -125,7 +141,9 @@ services:
             - sail
     pgweb:
         image: 'sosedoff/pgweb:latest'
-        profiles: [tools]
+        # Off by default; `./keel db-gui` starts it on demand, or add `pgweb` to
+        # KEEL_SERVICES to have `./keel up` bring it along.
+        profiles: [pgweb]
         ports:
             - '${PGWEB_PORT:-8768}:8081'
         environment:
@@ -135,6 +153,7 @@ services:
         depends_on:
             pgsql:
                 condition: service_healthy
+                required: false
 networks:
     sail:
         driver: bridge

@@ -46,6 +46,33 @@ Demo accounts are seeded with the password `password` — see `DemoSeeder`.
 | Mail          | Mailpit (local capture)                                        |
 | Local env     | Laravel Sail                                                   |
 
+### Which services run
+
+`./keel up` starts only the containers listed in `KEEL_SERVICES` in `.env` — by
+default `pgsql,redis,mailpit,horizon,scheduler`. The app container
+(`laravel.test`) is always on; everything else is optional and toggleable:
+
+```bash
+./keel services                    # list every service: enabled? running?
+./keel services disable horizon    # edit KEEL_SERVICES in .env, then
+./keel up                          # apply — a dropped service is stopped
+```
+
+Each name maps to a Docker Compose profile, so `KEEL_SERVICES` is just exported
+as `COMPOSE_PROFILES` — raw `docker compose` follows the same list.
+
+**Using a service you already run on the host** — drop it from `KEEL_SERVICES`
+and point the app at your own:
+
+| Drop      | Then set in `.env`                                         |
+| --------- | --------------------------------------------------------- |
+| `pgsql`   | `DB_HOST=host.docker.internal`, `DB_PORT=<your port>`      |
+| `redis`   | `REDIS_HOST=host.docker.internal`, `REDIS_PORT=<your port>`|
+| `mailpit` | `MAIL_HOST` / `MAIL_PORT` / … for your own SMTP            |
+
+Dropping `horizon` or `scheduler` means queued or scheduled work stops running —
+`/health` reports it. A dropped service simply doesn't publish its host port.
+
 ## Commands
 
 Everything goes through `./keel`. Run `./keel help` for the full list.
@@ -174,7 +201,9 @@ picked to dodge the usual defaults:
 
 Change the value there and compose, Vite and `./keel` all follow. `DB_PORT`,
 `REDIS_PORT` and `MAIL_PORT` are _container-internal_ and should stay as they
-are. `./keel doctor` reports any of these that a non-Keel process has taken.
+are. `./keel doctor` reports any of these that a non-Keel process has taken —
+except for a service you've dropped from `KEEL_SERVICES`, whose port is then
+yours to use.
 
 **Files created by artisan are owned by root** — `WWWUSER`/`WWWGROUP` in `.env`
 don't match your host user. Re-run `./keel setup`.

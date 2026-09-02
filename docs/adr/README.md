@@ -13,6 +13,7 @@ straightforward thing was tried and did not work.
 | [0002](0002-two-permission-vocabularies.md)      | Two permission vocabularies, split by who owns them              |
 | [0003](0003-tenant-isolation-by-global-scope.md) | Tenant isolation via a global scope, not route guards            |
 | [0004](0004-docker-only-bootstrap.md)            | Docker-only bootstrap, and why the composer container is special |
+| [0005](0005-pluggable-services.md)               | Pluggable Compose services via one `KEEL_SERVICES` profile list  |
 
 ## Backlog
 

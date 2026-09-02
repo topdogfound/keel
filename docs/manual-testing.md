@@ -15,6 +15,8 @@ Budget about an hour for the whole thing, or jump to the section you care about.
 ./keel db-gui                              # pgweb (opt-in, behind a profile)
 ```
 
+`./keel up` prints a URL banner for whatever services are enabled (see §15).
+
 To watch queries, jobs and mail behind each click, set `TELESCOPE_ENABLED=true`
 in `.env` (leave `.env.example` alone — it stays off by default) and run
 `./keel artisan config:clear`.
@@ -301,6 +303,34 @@ Prove the PHP → TypeScript contract holds: rename a property in
 Then prove the tenancy generator: `./keel artisan make:tenant-model Invoice`
 produces a model already carrying `BelongsToTeam` and a ULID public id. Delete
 the generated files afterwards.
+
+## 15 · Pluggable services
+
+```bash
+./keel services                  # all six optional services: enabled? running?
+```
+
+`laravel.test` is always on and not listed. Now drop one and re-apply:
+
+```bash
+./keel services disable mailpit  # rewrites KEEL_SERVICES in .env
+./keel up                        # "Stopping mailpit — no longer in KEEL_SERVICES"
+```
+
+| Check                      | Expect                                 |
+| -------------------------- | -------------------------------------- |
+| `./keel up` banner         | no Mailpit line                        |
+| `docker compose ps`        | no `mailpit` container                 |
+| app still loads at `:8765` | yes — `laravel.test` starts without it |
+| `./keel doctor`            | no warning about port 8767/8771        |
+
+```bash
+./keel services enable mailpit && ./keel up   # back, banner lists Mailpit again
+```
+
+For a service you run on the host instead, see **Which services run** in the
+README — drop it from `KEEL_SERVICES` and point `DB_HOST` / `REDIS_HOST` /
+`MAIL_*` at your own.
 
 ---
 

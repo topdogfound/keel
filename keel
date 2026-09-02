@@ -53,6 +53,68 @@ env_get() {
     printf '%s' "${val:-$default}"
 }
 
+# Every optional Compose service, and the default set ./keel runs. laravel.test
+# (the app) is always on and is not a member of either list.
+KEEL_SERVICES_ALL="pgsql redis mailpit horizon scheduler pgweb"
+KEEL_SERVICES_DEFAULT="pgsql,redis,mailpit,horizon,scheduler"
+
+# Each optional service in compose.yaml carries a profile named after itself, so
+# exporting KEEL_SERVICES as COMPOSE_PROFILES makes every `docker compose` and
+# `sail` call below start exactly the configured set with no per-command flags.
+# A real KEEL_SERVICES env var still wins -- env_get handles that.
+export_profiles() {
+    COMPOSE_PROFILES="$(env_get KEEL_SERVICES "$KEEL_SERVICES_DEFAULT")"
+    export COMPOSE_PROFILES
+}
+
+service_enabled() {
+    printf ',%s,' "$(env_get KEEL_SERVICES "$KEEL_SERVICES_DEFAULT")" | grep -q ",$1,"
+}
+
+# `docker compose up` starts the active profiles but never stops a profile you
+# just dropped, so after `./keel services disable X` the old container lingers
+# until the next `down`. Reconcile explicitly. pgweb is exempt: it has its own
+# on-demand command (`./keel db-gui`) and is expected to outlive an `up`.
+prune_disabled() {
+    local svc running
+    running="$(docker compose ps --status running --services 2>/dev/null)" || return 0
+    for svc in $KEEL_SERVICES_ALL; do
+        [ "$svc" = pgweb ] && continue
+        service_enabled "$svc" && continue
+        printf '%s\n' "$running" | grep -qx "$svc" || continue
+        info "Stopping ${svc} — no longer in KEEL_SERVICES"
+        docker compose stop "$svc" >/dev/null 2>&1 || true
+    done
+}
+
+# The end-of-run banner, shared by `setup` and `up`. Only lists services that
+# are actually enabled, so a stack without mailpit or horizon doesn't advertise
+# a dead URL.
+print_urls() {
+    local app_port; app_port="$(env_get APP_PORT 8765)"
+    echo
+    ok "${c_bld}Keel is up.${c_off}"
+    printf '  %-14s http://localhost:%s\n'       "App"     "$app_port"
+    printf '  %-14s http://localhost:%s/admin\n' "Admin"   "$app_port"
+    service_enabled mailpit && printf '  %-14s http://localhost:%s\n' \
+        "Mailpit" "$(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767)"
+    service_enabled horizon && printf '  %-14s http://localhost:%s/horizon\n' \
+        "Horizon" "$app_port"
+    service_enabled pgsql && printf '  %-14s postgres://localhost:%s  (host clients)\n' \
+        "Database" "$(env_get FORWARD_DB_PORT 8769)"
+    service_enabled redis && printf '  %-14s redis://localhost:%s\n' \
+        "Redis" "$(env_get FORWARD_REDIS_PORT 8770)"
+    if service_enabled pgweb; then
+        printf '  %-14s http://localhost:%s\n' "pgweb" "$(env_get PGWEB_PORT 8768)"
+    else
+        printf '  %-14s ./keel db-gui  (http://localhost:%s)\n' "pgweb" "$(env_get PGWEB_PORT 8768)"
+    fi
+    printf '  %-14s http://localhost:%s  (while ./keel dev runs)\n' "Vite" "$(env_get VITE_PORT 8766)"
+    echo
+    info "Next: run ${c_bld}./keel dev${c_off} for the Vite dev server with HMR."
+    echo
+}
+
 require_vendor() {
     [ -f "$SAIL" ] || die "vendor/ is missing. Run ${c_bld}./keel setup${c_off} first."
 }
@@ -84,7 +146,7 @@ cmd_setup() {
 
     if [ "$fresh" = 1 ]; then
         warn "--fresh: destroying containers and volumes (this drops the database)"
-        docker compose --profile tools down -v --remove-orphans || true
+        docker compose --profile '*' down -v --remove-orphans || true
     fi
 
     [ -f .env ] || { cp .env.example .env; ok "Created .env from .env.example"; }
@@ -110,7 +172,7 @@ cmd_setup() {
     "$SAIL" build
     info "Starting the stack..."
     "$SAIL" up -d
-    wait_for_pgsql
+    service_enabled pgsql && wait_for_pgsql
 
     grep -q '^APP_KEY=base64:' .env || { "$SAIL" artisan key:generate; }
     "$SAIL" artisan storage:link --quiet || true
@@ -138,14 +200,7 @@ cmd_setup() {
 
     [ "$ci" = 1 ] || git config core.hooksPath .githooks 2>/dev/null || true
 
-    echo
-    ok "${c_bld}Keel is up.${c_off}"
-    printf '  %-14s http://localhost:%s\n'       "App"     "$(env_get APP_PORT 8765)"
-    printf '  %-14s http://localhost:%s/admin\n' "Admin"   "$(env_get APP_PORT 8765)"
-    printf '  %-14s http://localhost:%s\n'       "Mailpit" "$(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767)"
-    printf '  %-14s http://localhost:%s  (while ./keel dev runs)\n' "Vite" "$(env_get VITE_PORT 8766)"
-    printf '  %-14s ./keel db-gui  (http://localhost:%s)\n' "Database" "$(env_get PGWEB_PORT 8768)"
-    echo
+    print_urls
 }
 
 cmd_doctor() {
@@ -160,17 +215,20 @@ cmd_doctor() {
     # so the published (host) port is field 3. Field 2 is the container port,
     # which only matches the host port by coincidence.
     local ours
-    ours="$(docker compose --profile tools ps --format '{{.Publishers}}' 2>/dev/null \
+    ours="$(docker compose --profile '*' ps --format '{{.Publishers}}' 2>/dev/null \
         | grep -oE '\{[^}]+\}' \
         | awk '{print $3}' | sort -u)"
 
-    for p in "$(env_get APP_PORT 8765)" \
-             "$(env_get VITE_PORT 8766)" \
-             "$(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767)" \
-             "$(env_get PGWEB_PORT 8768)" \
-             "$(env_get FORWARD_DB_PORT 8769)" \
-             "$(env_get FORWARD_REDIS_PORT 8770)" \
-             "$(env_get FORWARD_MAILPIT_PORT 8771)"; do
+    # Only the app's own ports plus those of the services KEEL_SERVICES actually
+    # publishes -- a host Postgres on FORWARD_DB_PORT is the user's own doing
+    # once they've dropped the pgsql service, not a conflict to warn about.
+    local ports; ports="$(env_get APP_PORT 8765) $(env_get VITE_PORT 8766)"
+    service_enabled mailpit && ports="$ports $(env_get FORWARD_MAILPIT_DASHBOARD_PORT 8767) $(env_get FORWARD_MAILPIT_PORT 8771)"
+    service_enabled pgweb   && ports="$ports $(env_get PGWEB_PORT 8768)"
+    service_enabled pgsql   && ports="$ports $(env_get FORWARD_DB_PORT 8769)"
+    service_enabled redis   && ports="$ports $(env_get FORWARD_REDIS_PORT 8770)"
+
+    for p in $ports; do
         if command -v ss >/dev/null && ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$p$"; then
             if ! printf '%s\n' "$ours" | grep -qx "$p"; then
                 warn "Port $p is in use by something outside this project (override it in .env)"
@@ -242,6 +300,68 @@ cmd_doctor() {
     [ "$problems" = 0 ] && ok "No problems found." || warn "$problems problem(s) found."
 }
 
+# `./keel services` — inspect and toggle which Compose services ./keel runs.
+# The list lives in .env as KEEL_SERVICES and is exported to Compose as
+# COMPOSE_PROFILES (see export_profiles). laravel.test is always on.
+cmd_services() {
+    local action="${1:-list}"; [ $# -gt 0 ] && shift || true
+    local current; current="$(env_get KEEL_SERVICES "$KEEL_SERVICES_DEFAULT")"
+
+    case "$action" in
+        list)
+            printf '%b\n' "${c_bld}Keel services${c_off}  (laravel.test is always on)"
+            local svc state run
+            for svc in $KEEL_SERVICES_ALL; do
+                if printf ',%s,' "$current" | grep -q ",$svc,"; then
+                    state="${c_grn}enabled ${c_off}"
+                else
+                    state="${c_ylw}disabled${c_off}"
+                fi
+                if docker compose ps --status running --quiet "$svc" 2>/dev/null | grep -q .; then
+                    run="running"
+                else
+                    run="stopped"
+                fi
+                printf '  %-10s %b  %s\n' "$svc" "$state" "$run"
+            done
+            echo
+            info "Toggle with ./keel services {enable|disable} <service>, then ./keel up"
+            ;;
+        enable|disable)
+            local svc="${1:-}"
+            [ -n "$svc" ] || die "Usage: ./keel services $action <service>  (one of: $KEEL_SERVICES_ALL)"
+            printf ' %s ' "$KEEL_SERVICES_ALL" | grep -q " $svc " \
+                || die "Unknown service: $svc  (one of: $KEEL_SERVICES_ALL)"
+            [ -f .env ] || die ".env is missing — run ./keel setup first."
+
+            # Rebuild the list in KEEL_SERVICES_ALL order, applying the toggle.
+            local want keep new=""
+            for want in $KEEL_SERVICES_ALL; do
+                keep=0
+                printf ',%s,' "$current" | grep -q ",$want," && keep=1
+                [ "$want" = "$svc" ] && { [ "$action" = enable ] && keep=1 || keep=0; }
+                [ "$keep" = 1 ] && new="${new:+$new,}$want"
+            done
+
+            if [ "$new" = "$current" ]; then
+                warn "$svc is already ${action}d — nothing to do."
+                return 0
+            fi
+
+            if grep -q '^KEEL_SERVICES=' .env; then
+                sed -i "s/^KEEL_SERVICES=.*/KEEL_SERVICES=$new/" .env
+            else
+                printf 'KEEL_SERVICES=%s\n' "$new" >> .env
+            fi
+            ok "${action}d $svc  →  KEEL_SERVICES=$new"
+            info "Run ${c_bld}./keel up${c_off} to apply."
+            ;;
+        *)
+            die "Usage: ./keel services [list | enable <svc> | disable <svc>]"
+            ;;
+    esac
+}
+
 usage() {
     cat <<'USAGE'
 Keel — Docker-first Laravel monolith
@@ -250,6 +370,7 @@ Keel — Docker-first Laravel monolith
   Develop      dev · build · shell · logs [svc] · artisan … · composer … · npm …
   Quality      test · e2e · lint · types · ts · rector · check
   Data         migrate · seed · psql · redis · tinker · db-gui
+  Services     services [list | enable <svc> | disable <svc>]
   Maintenance  node-reset · cache-reset · new <vendor/name>
 
 Everything runs inside Docker. The host needs Docker and git — nothing else.
@@ -257,11 +378,20 @@ USAGE
 }
 
 cmd="${1:-}"; [ $# -gt 0 ] && shift || true
+
+# KEEL_SERVICES -> COMPOSE_PROFILES, so every docker compose / sail call below
+# starts exactly the configured service set.
+export_profiles
+
 case "$cmd" in
     setup)      cmd_setup "$@" ;;
     doctor)     cmd_doctor "$@" ;;
-    up)         require_docker; sail up -d "$@" ;;
-    down)       docker compose --profile tools down "$@" ;;
+    services)   cmd_services "$@" ;;
+    up)         require_docker
+                [ $# -eq 0 ] && prune_disabled
+                sail up -d "$@"
+                [ $# -eq 0 ] && print_urls || true ;;
+    down)       docker compose --profile '*' down "$@" ;;
     restart)    sail restart "$@" ;;
     fresh)      cmd_setup --fresh ;;
     shell)      sail shell ;;
@@ -277,10 +407,12 @@ case "$cmd" in
     check)      sail composer ci:check ;;
     migrate)    sail artisan migrate "$@" ;;
     seed)       sail artisan db:seed "$@" ;;
-    psql)       sail psql ;;
-    redis)      sail redis ;;
+    psql)       service_enabled pgsql || die "pgsql isn't in KEEL_SERVICES. Use a host client on port $(env_get FORWARD_DB_PORT 8769), or ./keel services enable pgsql"
+                sail psql ;;
+    redis)      service_enabled redis || die "redis isn't in KEEL_SERVICES. Use a host client on port $(env_get FORWARD_REDIS_PORT 8770), or ./keel services enable redis"
+                sail redis ;;
     tinker)     sail tinker ;;
-    db-gui)     require_docker; docker compose --profile tools up -d pgweb
+    db-gui)     require_docker; docker compose --profile pgweb up -d pgweb
                 ok "pgweb: http://localhost:$(env_get PGWEB_PORT 8768)" ;;
     cache-reset) info "Clearing container caches..."
                 docker compose exec -T laravel.test rm -rf /tmp/phpstan

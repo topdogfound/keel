@@ -252,6 +252,18 @@ cmd_doctor() {
         fi
     fi
 
+    # The other silent container trap, and the one that looks like "Vite is
+    # slow" rather than like a fault: Docker Desktop mounts the project through
+    # a VM, and host inotify events don't cross that boundary reliably, so saves
+    # reach the browser late or not until a refresh. Advisory, not counted as a
+    # problem — plenty of setups watch fine, and there's nothing broken to fix.
+    # env_get only matches an uncommented assignment, so the shipped
+    # `# VITE_USE_POLLING=1` reads as unset, which is what we want.
+    if [ -z "$(env_get VITE_USE_POLLING)" ] &&
+       docker info --format '{{.OperatingSystem}}' 2>/dev/null | grep -q 'Docker Desktop'; then
+        warn "Docker Desktop: file events may not reach Vite's watcher. If HMR is slow or only updates on refresh, set VITE_USE_POLLING=1 in .env and run ./keel up"
+    fi
+
     if [ -f package.json ] && grep -q '"@playwright/test"' package.json; then
         ls node_modules/.cache/ms-playwright >/dev/null 2>&1 || \
         ls node_modules/playwright-core/.local-browsers >/dev/null 2>&1 || \

@@ -317,12 +317,12 @@ the generated files afterwards.
 ./keel up                        # "Stopping mailpit — no longer in KEEL_SERVICES"
 ```
 
-| Check                                    | Expect                                  |
-| ---------------------------------------- | --------------------------------------- |
-| `./keel up` banner                       | no Mailpit line                         |
-| `docker compose ps`                      | no `mailpit` container                  |
-| app still loads at `:8765`               | yes — `laravel.test` starts without it  |
-| `./keel doctor`                          | no warning about port 8767/8771         |
+| Check                      | Expect                                 |
+| -------------------------- | -------------------------------------- |
+| `./keel up` banner         | no Mailpit line                        |
+| `docker compose ps`        | no `mailpit` container                 |
+| app still loads at `:8765` | yes — `laravel.test` starts without it |
+| `./keel doctor`            | no warning about port 8767/8771        |
 
 ```bash
 ./keel services enable mailpit && ./keel up   # back, banner lists Mailpit again

@@ -26,7 +26,7 @@ runs. `.env` gains `KEEL_SERVICES`, a comma-separated allowlist, which the
 depends on `pgsql`, `redis` and `mailpit`. With a plain `depends_on: [pgsql]`,
 disabling the `pgsql` profile makes Compose refuse to start `laravel.test` at
 all ("depends on undefined service"). `required: false` keeps the health-gated
-ordering when the service *is* enabled and simply skips it when it isn't — which
+ordering when the service _is_ enabled and simply skips it when it isn't — which
 is exactly the "I run Postgres on the host" case.
 
 **`./keel up` prunes, because `docker compose up` doesn't.** Starting with a

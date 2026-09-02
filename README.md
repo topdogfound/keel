@@ -64,11 +64,11 @@ as `COMPOSE_PROFILES` — raw `docker compose` follows the same list.
 **Using a service you already run on the host** — drop it from `KEEL_SERVICES`
 and point the app at your own:
 
-| Drop      | Then set in `.env`                                         |
-| --------- | --------------------------------------------------------- |
-| `pgsql`   | `DB_HOST=host.docker.internal`, `DB_PORT=<your port>`      |
-| `redis`   | `REDIS_HOST=host.docker.internal`, `REDIS_PORT=<your port>`|
-| `mailpit` | `MAIL_HOST` / `MAIL_PORT` / … for your own SMTP            |
+| Drop      | Then set in `.env`                                          |
+| --------- | ----------------------------------------------------------- |
+| `pgsql`   | `DB_HOST=host.docker.internal`, `DB_PORT=<your port>`       |
+| `redis`   | `REDIS_HOST=host.docker.internal`, `REDIS_PORT=<your port>` |
+| `mailpit` | `MAIL_HOST` / `MAIL_PORT` / … for your own SMTP             |
 
 Dropping `horizon` or `scheduler` means queued or scheduled work stops running —
 `/health` reports it. A dropped service simply doesn't publish its host port.

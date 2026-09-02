@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { defaultAllowedOrigins } from 'vite';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
 // Host ports are defined once, in .env. compose.yaml forwards VITE_PORT into
@@ -40,6 +41,13 @@ export default defineConfig({
         port: vitePort,
         strictPort: true,
         origin: `http://localhost:${vitePort}`, // keeps 0.0.0.0 out of public/hot
+        // laravel-vite-plugin defaults `cors.origin` to `server.origin` when the
+        // latter is set, which would otherwise only allow requests whose Origin
+        // header is the Vite port itself. The page is served from APP_PORT, so
+        // without this every @vite/client / HMR / module request is cross-origin
+        // and gets rejected — killing HMR and full-reload-on-backend-change alike.
+        // Restore Vite's own default (any localhost/127.0.0.1 port) instead.
+        cors: { origin: defaultAllowedOrigins },
         hmr: {
             host: 'localhost', // where the browser should connect back to
         },

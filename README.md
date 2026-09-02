@@ -248,8 +248,22 @@ so this message never points at the real cause. Two things produce it:
 
 Always try the cache first, then check the boot.
 
-**HMR doesn't reload** — on some Docker Desktop setups bind-mount file events
-don't propagate. Set `VITE_USE_POLLING=1` in `.env` and restart `./keel dev`.
+**HMR is slow, intermittent, or only updates on refresh** — Docker Desktop mounts
+the project through a VM, and host inotify events don't cross that boundary
+reliably. Partial propagation is the usual symptom: some saves land instantly,
+others not until you refresh. Set `VITE_USE_POLLING=1` in `.env`, then run
+`./keel up`.
+
+`./keel up` is the part that matters, and restarting `./keel dev` is not enough:
+`./keel dev` execs into the running container, which keeps the environment it was
+created with. `./keel doctor` flags this case, and you can confirm the setting
+arrived with:
+
+```bash
+docker compose exec -T laravel.test env | grep VITE
+```
+
+Polling costs some idle CPU. Tune it with `VITE_POLL_INTERVAL` (ms, default 300).
 
 ## License
 

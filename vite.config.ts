@@ -14,6 +14,13 @@ import { defineConfig, lazyPlugins } from 'vite-plus';
 // browser on the host connects to the HMR server directly.
 const vitePort = Number(process.env.VITE_PORT ?? 8766);
 
+// How often the polling watcher restats a file, when polling is on at all.
+// Chokidar's own default is 100ms, which is wasted work inside a VM: nobody
+// saves a file ten times a second, and every tick crosses the virtiofs boundary.
+// 300ms is imperceptible by hand and a third of the traffic. Raise it if the
+// container idles hot.
+const pollInterval = Number(process.env.VITE_POLL_INTERVAL || 300);
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -52,15 +59,30 @@ export default defineConfig({
             host: 'localhost', // where the browser should connect back to
         },
         watch: {
-            // Some Docker Desktop bind mounts don't propagate inotify events.
-            // Opt in with VITE_USE_POLLING=1 rather than paying for it always.
+            // Docker Desktop mounts the project through a VM, and host inotify
+            // events don't cross that boundary reliably — saves show up late, or
+            // only after a manual refresh. Opt in with VITE_USE_POLLING=1 in
+            // .env rather than paying for it always; compose.yaml forwards it.
             usePolling: !!process.env.VITE_USE_POLLING,
+            interval: pollInterval,
+            binaryInterval: pollInterval,
+            // Vite already ignores .git, node_modules, test-results and its own
+            // cache/out dirs, and merges this list with those — so this is only
+            // what's left. Everything below is written by the running app rather
+            // than by a human, and storage/ is the one that matters: Inertia's
+            // devtools drop a JSON file in there on *every request*, which under
+            // polling is a steady drip of watcher events for files no module
+            // graph references.
             ignored: [
                 '**/.agents/**',
                 '**/.claude/**',
                 '**/.cursor/**',
                 '**/.junie/**',
                 '**/vendor/**',
+                '**/storage/**',
+                '**/bootstrap/cache/**',
+                '**/public/build/**',
+                '**/public/hot',
             ],
         },
     },

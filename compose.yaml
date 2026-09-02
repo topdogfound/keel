@@ -26,6 +26,18 @@ services:
             # Laravel reads .env itself off the bind mount, so it needs nothing
             # here. Node processes do.
             VITE_PORT: '${VITE_PORT:-8766}'
+            # Also vite.config.ts, and for the same reason: the watcher runs in
+            # Node, inside the container. Docker Desktop mounts the project
+            # through a VM (virtiofs behind a `fakeowner` FUSE layer), and host
+            # inotify events do not cross that boundary reliably — saves land in
+            # the browser late, or only after a manual refresh. Setting
+            # VITE_USE_POLLING=1 in .env is the fix; these two lines are what
+            # carry it into the container. Empty is the off position: the config
+            # coerces with `!!`. Changing either needs `./keel up`, not just a
+            # `./keel dev` restart — `docker compose exec` inherits the
+            # environment fixed at container-create time.
+            VITE_USE_POLLING: '${VITE_USE_POLLING:-}'
+            VITE_POLL_INTERVAL: '${VITE_POLL_INTERVAL:-}'
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
             IGNITION_LOCAL_SITES_PATH: '${PWD}'

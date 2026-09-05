@@ -30,16 +30,6 @@ test('the login page has no serious accessibility violations', async ({
     expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 });
 
-test('the registration page has no serious accessibility violations', async ({
-    page,
-}) => {
-    await page.goto('/register');
-
-    const violations = await scan(page);
-
-    expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-});
-
 test('the signed-out home page has no serious accessibility violations', async ({
     page,
 }) => {

@@ -1,10 +1,29 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Notifications\Auth\LoginOtpNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
-use Laravel\Fortify\Features;
-use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
+
+function requestLoginCode(string $email): string
+{
+    Notification::fake();
+
+    test()->post(route('login.store'), ['email' => $email]);
+
+    $code = null;
+    Notification::assertSentTo(
+        User::where('email', $email)->firstOrFail(),
+        LoginOtpNotification::class,
+        function (LoginOtpNotification $notification) use (&$code): true {
+            $code = $notification->code;
+
+            return true;
+        },
+    );
+
+    return $code;
+}
 
 test('login screen can be rendered', function (): void {
     $response = $this->get(route('login'));
@@ -12,63 +31,62 @@ test('login screen can be rendered', function (): void {
     $response->assertOk();
 });
 
-test('users can authenticate using the login screen', function (): void {
-    $user = User::factory()->create();
+test('requesting a code creates a new user and emails them a code', function (): void {
+    $code = requestLoginCode('new-user@example.com');
 
-    $response = $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
+    expect($code)->toMatch('/^\d{6}$/');
+    expect(User::where('email', 'new-user@example.com')->exists())->toBeTrue();
+});
 
-    $this->assertAuthenticated();
+test('an existing user can log in by verifying the emailed code', function (): void {
+    $user = User::factory()->unverified()->create();
+
+    $code = requestLoginCode($user->email);
+
+    $response = $this->post(route('login.verify'), ['email_code' => $code]);
+
+    $this->assertAuthenticatedAs($user);
     $response->assertRedirect(route('home'));
+    expect($user->fresh()->email_verified_at)->not->toBeNull();
 });
 
-test('passkey login response redirects to the home page', function (): void {
+test('an invalid code is rejected', function (): void {
     $user = User::factory()->create();
 
-    $request = Request::create(route('login', absolute: false), 'GET', server: [
-        'HTTP_ACCEPT' => 'application/json',
-    ]);
-    $request->setLaravelSession($this->app['session.store']);
-    $request->setUserResolver(fn () => $user);
+    requestLoginCode($user->email);
 
-    $jsonResponse = resolve(PasskeyLoginResponse::class)->toResponse($request);
+    $response = $this->post(route('login.verify'), ['email_code' => '000000']);
 
-    expect($jsonResponse->getData()->redirect)->toBe(route('home'));
-});
-
-test('users with two factor enabled are redirected to two factor challenge', function (): void {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
-
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
-
-    $user = User::factory()->withTwoFactor()->create();
-
-    $response = $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
-
-    $response->assertRedirect(route('two-factor.login'));
-    $response->assertSessionHas('login.id', $user->id);
+    $response->assertSessionHasErrors('email_code');
     $this->assertGuest();
 });
 
-test('users can not authenticate with invalid password', function (): void {
-    $user = User::factory()->create();
+test('verifying without a pending challenge is rejected', function (): void {
+    $response = $this->post(route('login.verify'), ['email_code' => '123456']);
 
-    $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
-    ]);
-
+    $response->assertSessionHasErrors('email_code');
     $this->assertGuest();
+});
+
+test('an expired code is rejected', function (): void {
+    $user = User::factory()->create();
+    $code = requestLoginCode($user->email);
+
+    $this->travel(11)->minutes();
+
+    $response = $this->post(route('login.verify'), ['email_code' => $code]);
+
+    $response->assertSessionHasErrors('email_code');
+    $this->assertGuest();
+});
+
+test('resending is rate limited by the cooldown', function (): void {
+    $user = User::factory()->create();
+    requestLoginCode($user->email);
+
+    $response = $this->post(route('login.resend'));
+
+    $response->assertSessionHasErrors('resend');
 });
 
 test('users can logout', function (): void {
@@ -77,18 +95,24 @@ test('users can logout', function (): void {
     $response = $this->actingAs($user)->post(route('logout'));
 
     $this->assertGuest();
-    $response->assertRedirect(route('home'));
+    $response->assertRedirect('/');
 });
 
-test('users are rate limited', function (): void {
+test('users can also logout by navigating to /logout directly', function (): void {
     $user = User::factory()->create();
 
-    RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+    $response = $this->actingAs($user)->get(route('logout'));
 
-    $response = $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
-    ]);
+    $this->assertGuest();
+    $response->assertRedirect('/');
+});
+
+test('requesting codes is rate limited', function (): void {
+    $user = User::factory()->create();
+
+    RateLimiter::increment(md5('login'.mb_strtolower($user->email).'|127.0.0.1'), amount: 5);
+
+    $response = $this->post(route('login.store'), ['email' => $user->email]);
 
     $response->assertTooManyRequests();
 });

@@ -1,27 +1,35 @@
 import { Form, Head, usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { AvatarUpload } from '@/components/settings/avatar-upload';
+import { ConnectedAccounts } from '@/components/settings/connected-accounts';
+import { EmailChangeForm } from '@/components/settings/email-change-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { edit } from '@/routes/profile';
 import type { Auth } from '@/types';
-import { send } from '@/routes/verification';
 
 type PageProps = {
     auth: Auth;
 };
 
-export default function Profile({
-    mustVerifyEmail,
-    status,
-}: {
-    mustVerifyEmail: boolean;
-    status?: string;
-}) {
+const GENDER_OPTIONS = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+] as const;
+
+export default function Profile({ status }: { status?: string }) {
     const { auth } = usePage<PageProps>().props;
     const user = auth.user;
 
@@ -39,21 +47,20 @@ export default function Profile({
                 <Heading
                     variant="small"
                     title="Profile"
-                    description="Update your name and email address"
+                    description="Update your name, phone number, and photo"
                 />
+
+                <AvatarUpload user={user} />
 
                 <Form
                     {...ProfileController.update.form()}
-                    options={{
-                        preserveScroll: true,
-                    }}
+                    options={{ preserveScroll: true }}
                     className="space-y-6"
                 >
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
-
                                 <Input
                                     id="name"
                                     className="mt-1 block w-full"
@@ -63,7 +70,6 @@ export default function Profile({
                                     autoComplete="name"
                                     placeholder="Full name"
                                 />
-
                                 <InputError
                                     className="mt-2"
                                     message={errors.name}
@@ -71,49 +77,50 @@ export default function Profile({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-
+                                <Label htmlFor="phone">Phone number</Label>
                                 <Input
-                                    id="email"
-                                    type="email"
+                                    id="phone"
+                                    type="tel"
                                     className="mt-1 block w-full"
-                                    defaultValue={user.email}
-                                    name="email"
-                                    required
-                                    autoComplete="username"
-                                    placeholder="Email address"
+                                    defaultValue={user.phone ?? ''}
+                                    name="phone"
+                                    autoComplete="tel"
+                                    placeholder="Phone number"
                                 />
-
                                 <InputError
                                     className="mt-2"
-                                    message={errors.email}
+                                    message={errors.phone}
                                 />
                             </div>
 
-                            {mustVerifyEmail &&
-                                user.email_verified_at === null && (
-                                    <div>
-                                        <p className="text-muted-foreground -mt-4 text-sm">
-                                            Your email address is unverified.{' '}
-                                            <Link
-                                                href={send()}
-                                                as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                            <div className="grid gap-2">
+                                <Label htmlFor="gender">Gender</Label>
+                                <Select
+                                    name="gender"
+                                    defaultValue={user.gender ?? undefined}
+                                >
+                                    <SelectTrigger
+                                        id="gender"
+                                        className="mt-1 w-full"
+                                    >
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {GENDER_OPTIONS.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
                                             >
-                                                Click here to re-send the
-                                                verification email.
-                                            </Link>
-                                        </p>
-
-                                        {status ===
-                                            'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been
-                                                sent to your email address.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.gender}
+                                />
+                            </div>
 
                             <div className="flex items-center gap-4">
                                 <Button
@@ -126,6 +133,35 @@ export default function Profile({
                         </>
                     )}
                 </Form>
+
+                <div className="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Email address"
+                        description={
+                            user.email_verified_at
+                                ? `${user.email} is verified.`
+                                : `${user.email} is unverified.`
+                        }
+                    />
+
+                    {status && (
+                        <div className="text-sm font-medium text-green-600">
+                            {status}
+                        </div>
+                    )}
+
+                    <EmailChangeForm currentEmail={user.email} />
+                </div>
+
+                <div className="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Connected accounts"
+                        description="Sign-in methods linked to this account"
+                    />
+                    <ConnectedAccounts user={user} />
+                </div>
             </div>
 
             <DeleteUser />

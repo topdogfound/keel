@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Actions\Auth\LoginChallengeView;
+use App\Actions\Auth\LoginConfiguration;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +47,11 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
+            'loginConfiguration' => app(LoginConfiguration::class)->inertia(),
+            'loginChallenge' => fn (): ?array => app(LoginChallengeView::class)->handle(
+                $request->session()->get(app(LoginConfiguration::class)->sessionKey()),
+            ),
+            'openLoginModal' => (bool) $request->session()->get('openLoginModal', false),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

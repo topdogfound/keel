@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Testing\OtpDebugController;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
@@ -18,6 +19,7 @@ use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 
 Route::get('/', HomeController::class)->name('home');
 
+require __DIR__.'/auth.php';
 require __DIR__.'/settings.php';
 
 /*
@@ -37,3 +39,19 @@ Route::middleware(['auth', 'can:viewPulse'])->group(function (): void {
     Route::get('/health', HealthCheckResultsController::class)->name('health');
     Route::get('/health.json', HealthCheckJsonResultsController::class)->name('health.json');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Testing-only OTP debug endpoints
+|--------------------------------------------------------------------------
+|
+| Playwright has no password to drive a login form with, so it reads the
+| plaintext code cached by DispatchLoginOtp/DispatchEmailChangeOtp here
+| instead of parsing a mailbox. Never registered outside local/testing.
+|
+*/
+
+if (app()->environment(['local', 'testing'])) {
+    Route::get('_testing/login-otp', [OtpDebugController::class, 'login']);
+    Route::get('_testing/email-change-otp', [OtpDebugController::class, 'emailChange']);
+}

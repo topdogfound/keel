@@ -49,7 +49,7 @@ export function UserMenuContent({ user }: Props) {
             <DropdownMenuItem asChild>
                 <Link
                     className="block w-full cursor-pointer"
-                    href={logout()}
+                    href={logout.post()}
                     as="button"
                     onClick={handleLogout}
                     data-test="logout-button"

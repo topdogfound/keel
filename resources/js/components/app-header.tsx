@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { useLoginDialog } from '@/components/auth/login-dialog';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
-import { home, login } from '@/routes';
+import { home } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -68,6 +69,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth } = page.props;
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const { openLogin } = useLoginDialog();
     const homeUrl = home();
     const user = auth.user;
 
@@ -126,13 +128,14 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             ))}
 
                                             {!user && (
-                                                <Link
-                                                    href={login()}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openLogin()}
                                                     className="flex items-center space-x-2 font-medium"
                                                 >
                                                     <LogIn className="h-5 w-5" />
                                                     <span>Log in</span>
-                                                </Link>
+                                                </button>
                                             )}
                                         </div>
 
@@ -251,7 +254,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     >
                                         <Avatar className="size-8 overflow-hidden rounded-full">
                                             <AvatarImage
-                                                src={user.avatar}
+                                                src={
+                                                    user.avatar_url ?? undefined
+                                                }
                                                 alt={user.name}
                                             />
                                             <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
@@ -268,9 +273,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
-                            <Button asChild>
-                                <Link href={login()}>Log in</Link>
-                            </Button>
+                            <Button onClick={() => openLogin()}>Log in</Button>
                         )}
                     </div>
                 </div>

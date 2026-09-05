@@ -1,9 +1,8 @@
-import { Form } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,10 +13,18 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { Auth } from '@/types';
 
 export default function DeleteUser() {
-    const passwordInput = useRef<HTMLInputElement>(null);
+    const emailInput = useRef<HTMLInputElement>(null);
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const user = auth.user;
+
+    if (!user) {
+        return null;
+    }
 
     return (
         <div className="space-y-6">
@@ -49,9 +56,9 @@ export default function DeleteUser() {
                         </DialogTitle>
                         <DialogDescription>
                             Once your account is deleted, all of its resources
-                            and data will also be permanently deleted. Please
-                            enter your password to confirm you would like to
-                            permanently delete your account.
+                            and data will also be permanently deleted. There is
+                            no password to confirm with, so type your email
+                            address, <strong>{user.email}</strong>, to proceed.
                         </DialogDescription>
 
                         <Form
@@ -59,7 +66,7 @@ export default function DeleteUser() {
                             options={{
                                 preserveScroll: true,
                             }}
-                            onError={() => passwordInput.current?.focus()}
+                            onError={() => emailInput.current?.focus()}
                             resetOnSuccess
                             className="space-y-6"
                         >
@@ -67,21 +74,22 @@ export default function DeleteUser() {
                                 <>
                                     <div className="grid gap-2">
                                         <Label
-                                            htmlFor="password"
+                                            htmlFor="confirm-email"
                                             className="sr-only"
                                         >
-                                            Password
+                                            Email address
                                         </Label>
 
-                                        <PasswordInput
-                                            id="password"
-                                            name="password"
-                                            ref={passwordInput}
-                                            placeholder="Password"
-                                            autoComplete="current-password"
+                                        <Input
+                                            id="confirm-email"
+                                            type="email"
+                                            name="email"
+                                            ref={emailInput}
+                                            placeholder={user.email}
+                                            autoComplete="off"
                                         />
 
-                                        <InputError message={errors.password} />
+                                        <InputError message={errors.email} />
                                     </div>
 
                                     <DialogFooter className="gap-2">

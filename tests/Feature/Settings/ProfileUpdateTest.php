@@ -1,6 +1,9 @@
 <?php
 
+use App\Enums\Gender;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('profile page is displayed', function (): void {
     $user = User::factory()->create();
@@ -12,14 +15,14 @@ test('profile page is displayed', function (): void {
     $response->assertOk();
 });
 
-test('profile information can be updated', function (): void {
+test('name and phone can be updated', function (): void {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->patch(route('profile.update'), [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'phone' => '+1 555 0100',
         ]);
 
     $response
@@ -29,34 +32,74 @@ test('profile information can be updated', function (): void {
     $user->refresh();
 
     expect($user->name)->toBe('Test User');
-    expect($user->email)->toBe('test@example.com');
-    expect($user->email_verified_at)->toBeNull();
+    expect($user->phone)->toBe('+1 555 0100');
 });
 
-test('email verification status is unchanged when the email address is unchanged', function (): void {
+test('gender can be updated', function (): void {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->patch(route('profile.update'), [
-            'name' => 'Test User',
-            'email' => $user->email,
+            'name' => $user->name,
+            'gender' => 'female',
         ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('profile.edit'));
-
-    expect($user->refresh()->email_verified_at)->not->toBeNull();
+    $response->assertSessionHasNoErrors();
+    expect($user->fresh()->gender)->toBe(Gender::Female);
 });
 
-test('user can delete their account', function (): void {
+test('an invalid gender is rejected', function (): void {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'gender' => 'not-a-real-gender',
+        ]);
+
+    $response->assertSessionHasErrors('gender');
+});
+
+test('the profile update request does not accept an email field', function (): void {
+    $user = User::factory()->create(['email' => 'original@example.com']);
+
+    $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'sneaky@example.com',
+        ]);
+
+    expect($user->fresh()->email)->toBe('original@example.com');
+});
+
+test('an avatar can be uploaded', function (): void {
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'avatar' => UploadedFile::fake()->image('avatar.jpg'),
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $user->refresh();
+    expect($user->avatar_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($user->avatar_path);
+});
+
+test('user can delete their account by typing their email', function (): void {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->delete(route('profile.destroy'), [
-            'password' => 'password',
+            'email' => $user->email,
         ]);
 
     $response
@@ -67,18 +110,18 @@ test('user can delete their account', function (): void {
     expect($user->fresh())->toBeNull();
 });
 
-test('correct password must be provided to delete account', function (): void {
+test('the wrong email does not delete the account', function (): void {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->from(route('profile.edit'))
         ->delete(route('profile.destroy'), [
-            'password' => 'wrong-password',
+            'email' => 'wrong@example.com',
         ]);
 
     $response
-        ->assertSessionHasErrors('password')
+        ->assertSessionHasErrors('email')
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();

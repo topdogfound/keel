@@ -6,12 +6,15 @@ namespace App\Providers;
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +33,24 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthorizationGates();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Rate limit the passwordless login flow: requesting a code and verifying
+     * one. Moved here from the now-removed Fortify service provider.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('login', function (Request $request) {
+            $throttleKey = Str::transliterate(Str::lower((string) $request->input('email'))).'|'.$request->ip();
+
+            return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        RateLimiter::for('login-otp-verify', function (Request $request) {
+            return Limit::perMinute(10)->by($request->session()->getId().'|'.$request->ip());
+        });
     }
 
     /**
@@ -61,16 +82,6 @@ class AppServiceProvider extends ServiceProvider
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
-        );
-
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
         );
     }
 }

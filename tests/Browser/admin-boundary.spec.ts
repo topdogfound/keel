@@ -5,11 +5,14 @@ import { logIn } from './support/auth';
  * The /admin boundary is the highest-consequence authorisation rule here:
  * without canAccessPanel every registered customer reaches the staff panel.
  * Pest covers it too; this proves it through a real browser session.
+ *
+ * The staff panel has no login page of its own -- everyone, staff included,
+ * authenticates through the app's single /login flow.
  */
-test('a guest is sent to the panel login', async ({ page }) => {
+test('a guest is sent to the unified login page', async ({ page }) => {
     await page.goto('/admin');
 
-    await expect(page).toHaveURL(/\/admin\/login/);
+    await expect(page).toHaveURL(/\/login/);
 });
 
 test('an ordinary user is refused the staff panel', async ({ page }) => {
@@ -28,5 +31,5 @@ test('a staff user reaches the staff panel', async ({ page }) => {
     const response = await page.goto('/admin');
 
     expect(response?.status()).toBe(200);
-    await expect(page).not.toHaveURL(/\/admin\/login/);
+    await expect(page).not.toHaveURL(/\/login/);
 });

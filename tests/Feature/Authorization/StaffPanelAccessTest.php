@@ -29,5 +29,7 @@ it('grants the staff panel to a user with a global role', function (): void {
 });
 
 it('guards the panel behind authentication', function (): void {
-    $this->get('/admin')->assertRedirect('/admin/login');
+    // The staff panel has no login page of its own — everyone, staff
+    // included, authenticates through the app's single /login flow.
+    $this->get('/admin')->assertRedirect('/login');
 });

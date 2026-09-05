@@ -15,8 +15,7 @@ arch('debugging helpers never reach a commit')
 
 arch('actions hold domain logic, not HTTP concerns')
     ->expect('App\Actions')
-    ->not->toUse([Request::class, Response::class])
-    ->ignoring('App\Actions\Fortify');
+    ->not->toUse([Request::class, Response::class]);
 
 arch('models do not depend on controllers')
     ->expect('App\Models')

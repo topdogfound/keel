@@ -1,10 +1,15 @@
+export type Gender = 'male' | 'female' | 'prefer_not_to_say';
+
 export type User = {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
+    phone?: string | null;
+    gender?: Gender | null;
+    avatar_url?: string | null;
+    google_linked?: boolean;
+    github_linked?: boolean;
     email_verified_at: string | null;
-    two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -18,19 +23,18 @@ export type Auth = {
     user: User | null;
 };
 
-export type Passkey = {
-    id: number;
-    name: string;
-    authenticator: string | null;
-    created_at_diff: string;
-    last_used_at_diff: string | null;
+export type LoginSocialProvider = {
+    key: 'google' | 'github';
+    label: string;
+    enabled: boolean;
 };
 
-export type TwoFactorSetupData = {
-    svg: string;
-    url: string;
+export type LoginConfiguration = {
+    otpLength: number;
+    socialProviders: LoginSocialProvider[];
 };
 
-export type TwoFactorSecretKey = {
-    secretKey: string;
-};
+export type LoginChallenge = {
+    maskedDestination: string;
+    resendAvailableAt: string;
+} | null;

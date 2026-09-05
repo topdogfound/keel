@@ -141,3 +141,24 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+ * Theme switching runs through the View Transitions API (see
+ * `resources/js/lib/theme-transition.ts`). Suppress the default cross-fade so
+ * the clip-path reveal animated onto ::view-transition-new(root) is the only
+ * thing that moves, and keep the old snapshot opaque underneath it.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/*
+ * Pin the collapsed clip-path between the snapshot and the JS animation that
+ * `ready.then()` starts, otherwise Firefox paints one frame of the new theme
+ * unclipped. The animation uses `fill: forwards`, so it wins from frame one.
+ */
+:root[data-theme-vt='active']::view-transition-new(root) {
+    clip-path: var(--theme-vt-clip-from);
+}

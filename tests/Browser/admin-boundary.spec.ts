@@ -22,7 +22,7 @@ test('an ordinary user is refused the staff panel', async ({ page }) => {
 });
 
 test('a staff user reaches the staff panel', async ({ page }) => {
-    await logIn(page, 'staff@keel.test');
+    await logIn(page, 'support@keel.test');
     await expect(page).not.toHaveURL(/\/login/);
 
     const response = await page.goto('/admin');

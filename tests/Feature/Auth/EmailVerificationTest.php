@@ -28,7 +28,7 @@ test('email can be verified', function (): void {
 
     Event::assertDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect('/dashboard?verified=1');
+    $response->assertRedirect('/?verified=1');
 });
 
 test('email is not verified with invalid hash', function (): void {
@@ -65,7 +65,7 @@ test('email is not verified with invalid user id', function (): void {
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
-test('verified user is redirected to dashboard from verification prompt', function (): void {
+test('verified user is redirected to the home page from verification prompt', function (): void {
     $user = User::factory()->create();
 
     Event::fake();
@@ -73,7 +73,7 @@ test('verified user is redirected to dashboard from verification prompt', functi
     $response = $this->actingAs($user)->get(route('verification.notice'));
 
     Event::assertNotDispatched(Verified::class);
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/');
 });
 
 test('already verified user visiting verification link is redirected without firing event again', function (): void {
@@ -88,7 +88,7 @@ test('already verified user visiting verification link is redirected without fir
     );
 
     $this->actingAs($user)->get($verificationUrl)
-        ->assertRedirect('/dashboard?verified=1');
+        ->assertRedirect('/?verified=1');
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();

@@ -41,6 +41,17 @@ const isDarkMode = (appearance: Appearance): boolean => {
     return appearance === 'dark' || (appearance === 'system' && prefersDark());
 };
 
+/**
+ * The concrete theme a mode currently resolves to. Exported so callers can tell
+ * whether picking a mode will actually change anything -- `system` may already
+ * resolve to whatever is on screen.
+ */
+export const resolveAppearance = (
+    appearance: Appearance,
+): ResolvedAppearance => {
+    return isDarkMode(appearance) ? 'dark' : 'light';
+};
+
 const applyTheme = (appearance: Appearance): void => {
     if (typeof document === 'undefined') {
         return;
@@ -94,9 +105,8 @@ export function useAppearance(): UseAppearanceReturn {
         () => 'system',
     );
 
-    const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)
-        ? 'dark'
-        : 'light';
+    const resolvedAppearance: ResolvedAppearance =
+        resolveAppearance(appearance);
 
     const updateAppearance = (mode: Appearance): void => {
         currentAppearance = mode;

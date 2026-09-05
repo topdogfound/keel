@@ -21,10 +21,10 @@ test('users can authenticate using the login screen', function (): void {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard'));
+    $response->assertRedirect(route('home'));
 });
 
-test('passkey login response redirects to the dashboard', function (): void {
+test('passkey login response redirects to the home page', function (): void {
     $user = User::factory()->create();
 
     $request = Request::create(route('login', absolute: false), 'GET', server: [
@@ -35,7 +35,7 @@ test('passkey login response redirects to the dashboard', function (): void {
 
     $jsonResponse = resolve(PasskeyLoginResponse::class)->toResponse($request);
 
-    expect($jsonResponse->getData()->redirect)->toBe(route('dashboard'));
+    expect($jsonResponse->getData()->redirect)->toBe(route('home'));
 });
 
 test('users with two factor enabled are redirected to two factor challenge', function (): void {

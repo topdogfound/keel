@@ -1,21 +1,41 @@
 import type { LucideIcon } from 'lucide-react';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes, MouseEvent } from 'react';
 import type { Appearance } from '@/hooks/use-appearance';
-import { useAppearance } from '@/hooks/use-appearance';
+import { resolveAppearance, useAppearance } from '@/hooks/use-appearance';
+import { startThemeTransition } from '@/lib/theme-transition';
 import { cn } from '@/lib/utils';
 
 export default function AppearanceToggleTab({
     className = '',
     ...props
 }: HTMLAttributes<HTMLDivElement>) {
-    const { appearance, updateAppearance } = useAppearance();
+    const { appearance, resolvedAppearance, updateAppearance } =
+        useAppearance();
 
     const tabs: { value: Appearance; icon: LucideIcon; label: string }[] = [
         { value: 'light', icon: Sun, label: 'Light' },
         { value: 'dark', icon: Moon, label: 'Dark' },
         { value: 'system', icon: Monitor, label: 'System' },
     ];
+
+    const handleSelect = (
+        event: MouseEvent<HTMLButtonElement>,
+        value: Appearance,
+    ): void => {
+        // Nothing on screen changes when re-picking the active tab, or when
+        // `system` already resolves to the current theme -- reveal would just
+        // wipe the same colours over themselves.
+        if (resolveAppearance(value) === resolvedAppearance) {
+            updateAppearance(value);
+
+            return;
+        }
+
+        startThemeTransition(() => updateAppearance(value), {
+            origin: event.currentTarget,
+        });
+    };
 
     return (
         <div
@@ -28,7 +48,7 @@ export default function AppearanceToggleTab({
             {tabs.map(({ value, icon: Icon, label }) => (
                 <button
                     key={value}
-                    onClick={() => updateAppearance(value)}
+                    onClick={(event) => handleSelect(event, value)}
                     className={cn(
                         'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
                         appearance === value

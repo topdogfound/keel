@@ -24,8 +24,8 @@ test('the login page renders the React bundle', async ({ page }) => {
     ).toBeVisible();
 });
 
-test('a seeded user can sign in and reach the dashboard', async ({ page }) => {
-    await logIn(page, 'owner@keel.test');
+test('a seeded user can sign in and reach the home page', async ({ page }) => {
+    await logIn(page, 'member@keel.test');
 
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('link', { name: /log in/i })).toHaveCount(0);
@@ -34,7 +34,7 @@ test('a seeded user can sign in and reach the dashboard', async ({ page }) => {
 test('bad credentials are rejected without leaving the form', async ({
     page,
 }) => {
-    await logIn(page, 'owner@keel.test', 'wrong-password');
+    await logIn(page, 'member@keel.test', 'wrong-password');
 
     await expect(page).toHaveURL(/\/login/);
 });

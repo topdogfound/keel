@@ -40,10 +40,20 @@ test('the registration page has no serious accessibility violations', async ({
     expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 });
 
-test('the dashboard has no serious accessibility violations', async ({
+test('the signed-out home page has no serious accessibility violations', async ({
     page,
 }) => {
-    await logIn(page, 'owner@keel.test');
+    await page.goto('/');
+
+    const violations = await scan(page);
+
+    expect(violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+});
+
+test('the signed-in home page has no serious accessibility violations', async ({
+    page,
+}) => {
+    await logIn(page, 'member@keel.test');
     await expect(page).not.toHaveURL(/\/login/);
 
     const violations = await scan(page);

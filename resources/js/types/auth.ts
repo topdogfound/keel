@@ -11,7 +11,11 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    /**
+     * Null for guests. The home page is public, so every component reachable
+     * from the app layout has to handle a visitor who is not signed in.
+     */
+    user: User | null;
 };
 
 export type Passkey = {

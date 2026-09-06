@@ -154,14 +154,7 @@ export default function Profile({ status }: { status?: string }) {
                     <EmailChangeForm currentEmail={user.email} />
                 </div>
 
-                <div className="space-y-4">
-                    <Heading
-                        variant="small"
-                        title="Connected accounts"
-                        description="Sign-in methods linked to this account"
-                    />
-                    <ConnectedAccounts user={user} />
-                </div>
+                <ConnectedAccounts user={user} />
             </div>
 
             <DeleteUser />

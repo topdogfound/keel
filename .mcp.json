@@ -11,6 +11,19 @@
                 "artisan",
                 "boost:mcp"
             ]
+        },
+        "laravel-brain": {
+            "command": "docker",
+            "args": [
+                "compose",
+                "exec",
+                "-T",
+                "laravel.test",
+                "php",
+                "artisan",
+                "mcp:start",
+                "brain"
+            ]
         }
     }
 }

@@ -99,7 +99,16 @@ Everything goes through `./keel`. Run `./keel help` for the full list.
 ./keel artisan migrate    # any artisan command
 ./keel e2e                # Playwright browser tests (+ accessibility)
 ./keel doctor             # diagnose a broken environment
+./keel brain              # map routes → actions → models at /_laravel-brain
 ```
+
+`./keel brain` runs [Laravel Brain](https://github.com/laramint/laravel-brain),
+a dev-only package that draws each request as a graph (route, controller,
+action, model, events, jobs) and flags N+1 queries and fat classes. Add
+`--watch` to rescan on save. It registers nothing unless `APP_ENV=local`, and
+`.mcp.json` exposes the same graph to AI agents as the `laravel-brain` MCP
+server. Its `brain:generate-rules` command is deliberately unused: Boost owns
+the agent guidelines, and the two would overwrite each other.
 
 ### Starting a new project from this template
 

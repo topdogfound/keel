@@ -117,6 +117,7 @@ return [
         'nova-api*',
         'pulse*',
         '_boost*',
+        '_laravel-brain*',
         '.well-known*',
     ],
 

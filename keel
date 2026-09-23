@@ -380,6 +380,7 @@ Keel — Docker-first Laravel monolith
 
   Lifecycle    setup [--fresh|--ci] · up · down · restart · fresh · doctor
   Develop      dev · build · shell · logs [svc] · artisan … · composer … · npm …
+               brain [--watch]
   Quality      test · e2e · lint · types · ts · rector · check
   Data         migrate · seed · psql · redis · tinker · db-gui
   Services     services [list | enable <svc> | disable <svc>]
@@ -424,6 +425,7 @@ case "$cmd" in
     redis)      service_enabled redis || die "redis isn't in KEEL_SERVICES. Use a host client on port $(env_get FORWARD_REDIS_PORT 8770), or ./keel services enable redis"
                 sail redis ;;
     tinker)     sail tinker ;;
+    brain)      sail artisan brain:scan "$@" ;;
     db-gui)     require_docker; docker compose --profile pgweb up -d pgweb
                 ok "pgweb: http://localhost:$(env_get PGWEB_PORT 8768)" ;;
     cache-reset) info "Clearing container caches..."

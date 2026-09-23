@@ -28,15 +28,16 @@ in `.env` (leave `.env.example` alone — it stays off by default) and run
 app. Port 80 is the default for HTTP, so the browser hides it —
 `http://localhost:8765` is the app; the paths below hang off it.
 
-| Surface         | URL                                                |
-| --------------- | -------------------------------------------------- |
-| Product UI      | `http://localhost:8765`                            |
-| Staff panel     | `http://localhost:8765/admin`                      |
-| Role management | `http://localhost:8765/admin/shield/roles`         |
-| Health          | `http://localhost:8765/health` _(staff only)_      |
-| API docs        | `http://localhost:8765/docs/api`                   |
-| Horizon         | `http://localhost:8765/horizon`                    |
-| Telescope       | `http://localhost:8765/telescope` _(once enabled)_ |
+| Surface         | URL                                                             |
+| --------------- | --------------------------------------------------------------- |
+| Product UI      | `http://localhost:8765`                                         |
+| Staff panel     | `http://localhost:8765/admin`                                   |
+| Role management | `http://localhost:8765/admin/shield/roles`                      |
+| Health          | `http://localhost:8765/health` _(staff only)_                   |
+| API docs        | `http://localhost:8765/docs/api`                                |
+| Horizon         | `http://localhost:8765/horizon`                                 |
+| Telescope       | `http://localhost:8765/telescope` _(once enabled)_              |
+| Laravel Brain   | `http://localhost:8765/_laravel-brain` _(after `./keel brain`)_ |
 
 **Separate containers, so their own ports.**
 

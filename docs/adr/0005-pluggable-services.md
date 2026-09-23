@@ -44,7 +44,9 @@ service you disabled yesterday leaks past `./keel down`.
 
 **Scope: Compose services only.** Telescope and Pulse are Composer packages
 already gated by `TELESCOPE_ENABLED` / `PULSE_ENABLED`; making the packages
-themselves removable is a separate, larger decision.
+themselves removable is a separate, larger decision. Laravel Brain is the same
+kind of thing, but a `require-dev` package gated by `APP_ENV=local`, not a
+Compose service.
 
 ## Verify it still holds
 

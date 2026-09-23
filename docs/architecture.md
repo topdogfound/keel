@@ -146,6 +146,12 @@ Set once in `AppServiceProvider::configureDefaults()`:
 | Telescope | `/telescope`         | `viewTelescope` | `TELESCOPE_ENABLED=false`      |
 | Activity  | `activity_log` table | —               | logs `name`, `email` on `User` |
 
+[Laravel Brain](https://github.com/laramint/laravel-brain) is a dev-only
+architecture graph at `/_laravel-brain`, rebuilt by `./keel brain`. It has no
+gate of its own and serves application source, so its only guard is that its
+provider registers nothing outside `APP_ENV=local`;
+`tests/Feature/LaravelBrainTest.php` pins that down.
+
 ## Infrastructure
 
 Docker Compose, one profile per optional service, driven by `KEEL_SERVICES` in

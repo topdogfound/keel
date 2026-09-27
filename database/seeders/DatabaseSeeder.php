@@ -17,6 +17,12 @@ class DatabaseSeeder extends Seeder
         // so this call must survive `./keel new`.
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // The browser suite's accounts. Also kept by `./keel new`, and never
+        // seeded outside local/testing.
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(BrowserTestUserSeeder::class);
+        }
+
         $this->call(DemoSeeder::class);
     }
 }

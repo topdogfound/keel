@@ -59,8 +59,8 @@ Password is `password` for all of them.
 | Account                 | Who they are                                          |
 | ----------------------- | ----------------------------------------------------- |
 | `super_admin@keel.test` | Ada Lovelace — staff, every permission                |
-| `support@keel.test`     | Grace Hopper — staff, read-only                       |
-| `member@keel.test`      | Alan Turing — an ordinary user, no staff panel access |
+| `support@example.test`  | Grace Hopper — staff, read-only                       |
+| `member@example.test`   | Alan Turing — an ordinary user, no staff panel access |
 
 Use **two browsers** (or one plus a private window) so you can hold two sessions
 at once. Several checks compare what different people see.
@@ -69,17 +69,17 @@ at once. Several checks compare what different people see.
 
 ## 1 · Product UI
 
-| Do this                                 | Expect                                 |
-| --------------------------------------- | -------------------------------------- |
-| Open `http://localhost:8765`            | Welcome page, Log in / Register links  |
-| Register a new account                  | Lands on `/dashboard`                  |
-| Log out, log in as `member@keel.test`   | The dashboard                          |
-| `/settings/profile`                     | Name and email, editable               |
-| `/settings/security`                    | Password, two-factor, passkeys         |
-| Enable two-factor                       | QR code and recovery codes appear      |
-| Log out and back in                     | Prompted for the 2FA code              |
-| `/settings/appearance`                  | Light / dark / system, applied at once |
-| Change your password, then log in again | New password works, old one does not   |
+| Do this                                  | Expect                                 |
+| ---------------------------------------- | -------------------------------------- |
+| Open `http://localhost:8765`             | Welcome page, Log in / Register links  |
+| Register a new account                   | Lands on `/dashboard`                  |
+| Log out, log in as `member@example.test` | The dashboard                          |
+| `/settings/profile`                      | Name and email, editable               |
+| `/settings/security`                     | Password, two-factor, passkeys         |
+| Enable two-factor                        | QR code and recovery codes appear      |
+| Log out and back in                      | Prompted for the 2FA code              |
+| `/settings/appearance`                   | Light / dark / system, applied at once |
+| Change your password, then log in again  | New password works, old one does not   |
 
 `/settings/security` sits behind Laravel's `RequirePassword` middleware, so
 reaching it after a while asks you to confirm your password first. That is the
@@ -93,8 +93,8 @@ authority is a property of the user, not something the product UI can grant.
 | As                      | Go to `/admin` | Expect                       |
 | ----------------------- | -------------- | ---------------------------- |
 | Logged out              |                | Redirected to `/admin/login` |
-| `member@keel.test`      |                | **403 Forbidden**            |
-| `support@keel.test`     |                | The dashboard                |
+| `member@example.test`   |                | **403 Forbidden**            |
+| `support@example.test`  |                | The dashboard                |
 | `super_admin@keel.test` |                | The dashboard                |
 
 Then compare the two staff roles on the **same page**, `/admin/users`. This is
@@ -103,7 +103,7 @@ Filament Shield's permission set made visible.
 | As                      | Should be able to                      | Should **not** see             |
 | ----------------------- | -------------------------------------- | ------------------------------ |
 | `super_admin@keel.test` | List, view, create, edit, delete users | —                              |
-| `support@keel.test`     | List and view users                    | Create, Edit or Delete actions |
+| `support@example.test`  | List and view users                    | Create, Edit or Delete actions |
 
 `RolesAndPermissionsSeeder` grants Support only the `View*` permissions on
 purpose — a read-only default you widen in Shield's UI rather than in code.

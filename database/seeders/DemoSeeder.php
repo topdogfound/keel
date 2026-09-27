@@ -19,17 +19,17 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $this->user('Topdogfound', 'topdogfound@gmail.com')->assignRole(StaffRole::SuperAdmin->value);
-        $this->user('Grace Hopper', 'support@keel.test')->assignRole(StaffRole::Support->value);
-        $this->user('Alan Turing', 'member@keel.test');
 
+        // The other two accounts come from BrowserTestUserSeeder, which runs
+        // first in local; they're listed here so setup shows every sign-in.
         $this->command->newLine();
         $this->command->info('Demo accounts — there are no passwords. Sign in at /login with the email below; a one-time code is emailed to it (in local, it is also logged to the console).');
         $this->command->table(
             ['Email', 'Role'],
             [
                 ['topdogfound@gmail.com', 'Super Admin (staff panel)'],
-                ['support@keel.test', 'Support (staff panel)'],
-                ['member@keel.test', '— (ordinary user)'],
+                [BrowserTestUserSeeder::SUPPORT, 'Support (staff panel)'],
+                [BrowserTestUserSeeder::MEMBER, '— (ordinary user)'],
             ],
         );
     }

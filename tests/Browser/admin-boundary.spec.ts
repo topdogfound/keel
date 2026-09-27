@@ -16,7 +16,7 @@ test('a guest is sent to the unified login page', async ({ page }) => {
 });
 
 test('an ordinary user is refused the staff panel', async ({ page }) => {
-    await logIn(page, 'member@keel.test');
+    await logIn(page, 'member@example.test');
     await expect(page).not.toHaveURL(/\/login/);
 
     const response = await page.goto('/admin');
@@ -25,7 +25,7 @@ test('an ordinary user is refused the staff panel', async ({ page }) => {
 });
 
 test('a staff user reaches the staff panel', async ({ page }) => {
-    await logIn(page, 'support@keel.test');
+    await logIn(page, 'support@example.test');
     await expect(page).not.toHaveURL(/\/login/);
 
     const response = await page.goto('/admin');

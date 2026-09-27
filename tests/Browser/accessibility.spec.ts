@@ -43,7 +43,7 @@ test('the signed-out home page has no serious accessibility violations', async (
 test('the signed-in home page has no serious accessibility violations', async ({
     page,
 }) => {
-    await logIn(page, 'member@keel.test');
+    await logIn(page, 'member@example.test');
     await expect(page).not.toHaveURL(/\/login/);
 
     const violations = await scan(page);

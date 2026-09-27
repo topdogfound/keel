@@ -32,15 +32,18 @@ builds the app image, starts the stack, migrates, seeds and builds assets.
 | Database GUI | `./keel db-gui` → http://localhost:8768   |
 | Health       | http://localhost:8765/health (staff only) |
 
-Demo accounts are seeded with the password `password`:
+Seeded accounts have no password: sign in at `/login` with the email and a
+one-time code (in local it is also logged to the console).
 
 | Account                 | Can reach `/admin` as         |
 | ----------------------- | ----------------------------- |
-| `super_admin@keel.test` | Super Admin — full access     |
-| `support@keel.test`     | Support — read-only           |
-| `member@keel.test`      | — an ordinary user, no access |
+| `topdogfound@gmail.com` | Super Admin — full access     |
+| `support@example.test`  | Support — read-only           |
+| `member@example.test`   | — an ordinary user, no access |
 
-See `DemoSeeder`; `./keel new` removes it.
+The super admin comes from `DemoSeeder`, which `./keel new` removes. The other
+two come from `BrowserTestUserSeeder`: the Playwright suite signs in as them, so
+it is kept, and only seeded in local/testing.
 
 ## The stack
 
@@ -104,12 +107,17 @@ Everything goes through `./keel`. Run `./keel help` for the full list.
 ### Starting a new project from this template
 
 ```bash
-./keel new acme/widgets
+./keel new acme/widgets                      # creates ../widgets
+./keel new acme/widgets ~/code/widgets --port-base 8865
 ```
 
-Renames the package, resets the app identity, strips demo content and starts a
-fresh git history. `docs/` is kept on purpose — the new project inherits the
-non-obvious decisions along with the code that depends on them.
+Copies the template's committed files into a new directory (a sibling named
+after the package, unless you give one), then renames the package, app and
+database, strips demo content and starts a fresh git history there. The
+template checkout itself is never modified. `--port-base N` moves the seven
+host ports to N…N+6, so the new project can run alongside this one; `--yes`
+skips the confirmation. `docs/` is kept on purpose — the new project inherits
+the non-obvious decisions along with the code that depends on them.
 
 ## Types shared with the frontend
 

@@ -2,6 +2,10 @@
 # Keel — the single entrypoint. Requires Docker; nothing else.
 set -euo pipefail
 
+# Remembered before the cd below, so `./keel new vendor/name ../dir` resolves a
+# relative destination against where the user typed it, not the template root.
+export KEEL_CALLER_PWD="$PWD"
+
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 BOOTSTRAP_IMAGE="laravelsail/php84-composer:latest"
@@ -383,7 +387,7 @@ Keel — Docker-first Laravel monolith
   Quality      test · e2e · lint · types · ts · rector · check
   Data         migrate · seed · psql · redis · tinker · db-gui
   Services     services [list | enable <svc> | disable <svc>]
-  Maintenance  node-reset · cache-reset · new <vendor/name>
+  Maintenance  node-reset · cache-reset · new <vendor/name> [dir] [--port-base N]
 
 Everything runs inside Docker. The host needs Docker and git — nothing else.
 USAGE
@@ -440,8 +444,7 @@ case "$cmd" in
     composer)   sail composer "$@" ;;
     npm)        sail npm "$@" ;;
     npx)        sail npx "$@" ;;
-    new)        [ $# -eq 1 ] || die "Usage: ./keel new <vendor/name>"
-                bash bin/keel-new.sh "$1" ;;
+    new)        BOOTSTRAP_IMAGE="$BOOTSTRAP_IMAGE" bash bin/keel-new.sh "$@" ;;
     ""|-h|--help|help) usage ;;
     *)          die "Unknown command: $cmd  (try ./keel help)" ;;
 esac

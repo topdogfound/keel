@@ -5,7 +5,8 @@ import { logIn } from './support/auth';
  * Covers the flows unit tests cannot reach: real navigation, real form posts,
  * real session cookies, and the Inertia bundle actually booting.
  *
- * Relies on the demo seeder, so run after `./keel setup` or `./keel seed`.
+ * Signs in as BrowserTestUserSeeder's accounts, so run after `./keel setup` or
+ * `./keel seed`.
  */
 
 test('the login page renders the React bundle', async ({ page }) => {
@@ -22,7 +23,7 @@ test('the login page renders the React bundle', async ({ page }) => {
 });
 
 test('a seeded user can sign in and reach the home page', async ({ page }) => {
-    await logIn(page, 'member@keel.test');
+    await logIn(page, 'member@example.test');
 
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('button', { name: /log in/i })).toHaveCount(0);
@@ -32,7 +33,7 @@ test('an invalid code is rejected without signing in', async ({ page }) => {
     await page.goto('/login');
     await page
         .getByRole('textbox', { name: 'Email address' })
-        .fill('member@keel.test');
+        .fill('member@example.test');
     await page.getByRole('button', { name: 'Send code' }).click();
 
     await expect(
@@ -55,7 +56,7 @@ test('the login modal signs in without leaving the page', async ({ page }) => {
 
     await page
         .getByRole('textbox', { name: 'Email address' })
-        .fill('member@keel.test');
+        .fill('member@example.test');
     await page.getByRole('button', { name: 'Send code' }).click();
 
     await expect(
@@ -63,7 +64,7 @@ test('the login modal signs in without leaving the page', async ({ page }) => {
     ).toBeVisible();
 
     const response = await page.request.get(
-        '/_testing/login-otp?email=member%40keel.test',
+        '/_testing/login-otp?email=member%40example.test',
     );
     const { code } = (await response.json()) as { code: string | null };
 
